@@ -39,8 +39,4 @@
 
 ## 开发时间
 
-啊。。遥遥无期呢，作者在考研
-
-## 服务器启动参数
-
-`java -Dignite.mods=./plugins -Dignite.jar=./velocity-3.4.0-SNAPSHOT-563.jar -Dignite.libraries=./libraries -jar ignite-launcher-1.1.1-SNAPSHOT-all.jar`
+作者很忙，年更插件，有需要的话，你可以提交PR，但本仓库不接受低质量的PR，有问题就发issue
