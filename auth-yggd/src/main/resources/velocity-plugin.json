@@ -1,0 +1,8 @@
+{
+  "id": "hzl-auth-yggd",
+  "name": "HyperZoneLogin - Auth Yggdrasil",
+  "version": "1.0.0",
+  "authors": ["ksqeib"],
+  "dependencies": [{"id":"hyperzonelogin","optional":false}],
+  "main": "icu.h2l.login.auth.online.AuthYggdPlugin"
+}

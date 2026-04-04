@@ -14,8 +14,8 @@ import icu.h2l.api.limbo.HyperZoneLimboProvider
 import icu.h2l.api.module.HyperSubModule
 import icu.h2l.api.player.HyperZonePlayerAccessor
 import icu.h2l.api.player.HyperZonePlayerAccessorProvider
-import icu.h2l.login.auth.offline.OfflineSubModule
-import icu.h2l.login.auth.online.YggdrasilSubModule
+// Module implementations (auth-offline, auth-yggd, data-merge) are now separate plugins
+// and will register themselves with the main plugin at runtime. Do not import them here.
 import icu.h2l.login.command.HyperZoneLoginCommand
 import icu.h2l.login.config.DatabaseSourceConfig
 import icu.h2l.login.config.OfflineMatchConfig
@@ -29,7 +29,6 @@ import icu.h2l.login.listener.EventListener
 import icu.h2l.login.manager.HyperChatCommandManagerImpl
 import icu.h2l.login.manager.HyperZonePlayerManager
 import icu.h2l.login.manager.LoginServerManager
-import icu.h2l.login.merge.MergeSubModule
 import icu.h2l.login.util.registerApiLogger
 import net.kyori.adventure.text.logger.slf4j.ComponentLogger
 import org.spongepowered.configurate.ConfigurationOptions
@@ -104,10 +103,11 @@ class HyperZoneLoginMain @Inject constructor(
         )
 
 //        最后加载模块
+        // Keep internal modules that are part of the main plugin
         registerModule(VelocityNetworkModule())
-        registerModule(OfflineSubModule())
-        registerModule(YggdrasilSubModule())
-        registerModule(MergeSubModule())
+        // External modules (auth-offline, auth-yggd, data-merge) will be loaded as
+        // separate Velocity plugins and should call `registerModule(...)` on this
+        // main plugin during their own initialization.
 
 
 

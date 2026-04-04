@@ -10,7 +10,10 @@ repositories {
 }
 
 dependencies {
-    implementation(project(":api"))
+    // The API is provided by the main plugin at runtime. Use compileOnly so
+    // the submodule is built as a standalone Velocity plugin and doesn't
+    // bundle the API classes (avoids duplication in the main shadow jar).
+    compileOnly(project(":api"))
 //    VC
     compileOnly("com.velocitypowered:velocity-api:3.4.0-SNAPSHOT")
     // Exposed ORM

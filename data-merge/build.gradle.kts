@@ -10,9 +10,11 @@ repositories {
 }
 
 dependencies {
-    implementation(project(":api"))
-    implementation(project(":auth-yggd"))
-    implementation(project(":auth-offline"))
+    // Build as a standalone Velocity plugin; reference API at compile time only
+    compileOnly(project(":api"))
+    // The auth modules are separate plugins; keep compileOnly if you reference them
+    compileOnly(project(":auth-yggd"))
+    compileOnly(project(":auth-offline"))
 
     compileOnly("com.velocitypowered:velocity-api:3.4.0-SNAPSHOT")
 

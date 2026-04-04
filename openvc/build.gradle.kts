@@ -4,9 +4,9 @@ plugins {
 }
 
 dependencies {
-    implementation(project(":auth-offline"))
-    implementation(project(":auth-yggd"))
-    implementation(project(":data-merge"))
+    // Modules (auth-offline, auth-yggd, data-merge) are now separate Velocity plugins
+    // and will register themselves with the main plugin at runtime. Do not include
+    // them as project dependencies here so they are not bundled into the main shadow jar.
     implementation(project(":api"))
 //    implementation(project(":vcinjector"))
 
@@ -76,10 +76,7 @@ tasks {
             include(dependency("com.zaxxer:HikariCP"))
 //           api
             include(dependency(":api"))
-//            模块
-            include(dependency(":auth-offline"))
-            include(dependency(":auth-yggd"))
-            include(dependency(":data-merge"))
+//            模块 are now separate Velocity plugins and should not be bundled here
         }
     }
     build {
