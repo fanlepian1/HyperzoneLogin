@@ -5,7 +5,7 @@ import com.velocitypowered.api.plugin.PluginContainer
 import com.velocitypowered.api.proxy.Player
 import com.velocitypowered.api.proxy.ProxyServer
 import icu.h2l.api.event.limbo.LimboAuthStartEvent
-import icu.h2l.api.limbo.HyperZoneLimbo
+import icu.h2l.api.limbo.HyperZoneLimboAdapter
 import icu.h2l.login.limbo.handler.LimboAuthSessionHandler
 import icu.h2l.login.manager.HyperZonePlayerManager
 import icu.h2l.login.HyperZoneLoginMain
@@ -16,12 +16,13 @@ import net.elytrium.limboapi.api.chunk.VirtualWorld
 import net.elytrium.limboapi.api.event.LoginLimboRegisterEvent
 import net.elytrium.limboapi.api.player.GameMode
 
-//用于注册到limbo服务器，不需要融合于任何模块目前
-class LimboAuth(server: ProxyServer) : HyperZoneLimbo {
+/**
+ * Adapter over the real Limbo API. This class bridges the third-party Limbo API
+ * to our internal adapter interface. Only construct this when Limbo is present.
+ */
+class LimboAuth(private val server: ProxyServer) : HyperZoneLimboAdapter {
     private val factory: LimboFactory
     private lateinit var limboAuthServer: Limbo
-    override val authServer: Limbo
-        get() = limboAuthServer
 
     init {
         factory = server.pluginManager.getPlugin("limboapi")
@@ -43,10 +44,8 @@ class LimboAuth(server: ProxyServer) : HyperZoneLimbo {
             .setGameMode(GameMode.ADVENTURE)
     }
 
-    // 依靠GameProfileRequestEvent，到这里我们的验证早就结束了，这里的onlineMode应该是正确的
     @Subscribe
     fun onLoginLimboRegister(event: LoginLimboRegisterEvent) {
-        // 必须callBack
         event.addOnJoinCallback { authPlayer(event.player) }
     }
 
@@ -61,6 +60,12 @@ class LimboAuth(server: ProxyServer) : HyperZoneLimbo {
         }
 
         val newHandler = LimboAuthSessionHandler(player, hyperZonePlayer)
-        authServer.spawnPlayer(player, newHandler)
+        limboAuthServer.spawnPlayer(player, newHandler)
+    }
+
+    // HyperZoneLimboAdapter implementation --------------------------------------------------
+    override fun registerCommand(meta: com.velocitypowered.api.command.CommandMeta, command: com.velocitypowered.api.command.SimpleCommand) {
+        limboAuthServer.registerCommand(meta, command)
     }
 }
+

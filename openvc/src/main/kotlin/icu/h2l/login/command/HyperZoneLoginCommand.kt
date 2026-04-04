@@ -23,7 +23,7 @@ class HyperZoneLoginCommand : SimpleCommand {
             }
 
             sender.sendPlainMessage("§e开始重新认证...")
-            HyperZoneLoginMain.getInstance().limboServerManager.authPlayer(sender)
+            HyperZoneLoginMain.getInstance().triggerLimboAuthForPlayer(sender)
             return
         } else if (args[0].equals("uuid", ignoreCase = true)) {
             if (sender !is Player) {

@@ -3,6 +3,6 @@
   "name":"HyperZoneLogin",
   "version":"0.0.1",
   "authors":["ksqeib"],
-  "dependencies":[{"id":"mckotlin-velocity","optional":false},{"id":"limboapi","optional":false}],
+  "dependencies":[{"id":"mckotlin-velocity","optional":false},{"id":"limboapi","optional":true}],
   "main":"icu.h2l.login.HyperZoneLoginMain"
 }

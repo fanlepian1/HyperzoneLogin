@@ -9,7 +9,7 @@ import com.velocitypowered.api.proxy.ProxyServer
 import icu.h2l.api.command.HyperChatCommandManager
 import icu.h2l.api.command.HyperChatCommandManagerProvider
 import icu.h2l.api.command.HyperChatCommandRegistration
-import icu.h2l.api.limbo.HyperZoneLimbo
+import icu.h2l.api.limbo.HyperZoneLimboAdapter
 import icu.h2l.api.limbo.HyperZoneLimboProvider
 import icu.h2l.api.module.HyperSubModule
 import icu.h2l.api.player.HyperZonePlayerAccessor
@@ -46,10 +46,10 @@ class HyperZoneLoginMain @Inject constructor(
     private val injector: Injector
 ) : HyperZoneLimboProvider, HyperZonePlayerAccessorProvider, HyperChatCommandManagerProvider {
     lateinit var loginServerManager: LoginServerManager
-    lateinit var limboServerManager: LimboAuth
+    var limboServerManager: LimboAuth? = null
     lateinit var databaseManager: icu.h2l.login.manager.DatabaseManager
     lateinit var databaseHelper: DatabaseHelper
-    override val limboAuth: HyperZoneLimbo
+    override val limboAdapter: HyperZoneLimboAdapter?
         get() = limboServerManager
     override val hyperZonePlayers: HyperZonePlayerAccessor
         get() = HyperZonePlayerManager
@@ -91,9 +91,25 @@ class HyperZoneLoginMain @Inject constructor(
         createBaseTables()
 
         loginServerManager = LoginServerManager()
-        limboServerManager = LimboAuth(server)
-        limboServerManager.load()
-        HyperChatCommandManagerImpl.bindLimbo(proxy, limboServerManager.authServer)
+
+        // Soft-dependency: only create/load Limbo adapter when the limboapi plugin is present
+        val limboPluginPresent = server.pluginManager.getPlugin("limboapi").isPresent
+        if (limboPluginPresent) {
+            try {
+                val limbo = LimboAuth(server)
+                limbo.load()
+                limboServerManager = limbo
+                // bind adapter (not the third-party Limbo type)
+                HyperChatCommandManagerImpl.bindLimbo(proxy, limbo)
+                proxy.eventManager.register(this, limbo)
+            } catch (t: Throwable) {
+                logger.warn("Limbo plugin detected but initialization failed: ${t.message}")
+            }
+        } else {
+            // No limbo present; bind null adapter so command registration is a no-op
+            HyperChatCommandManagerImpl.bindLimbo(proxy, null)
+            logger.info("Limbo not present; running without Limbo integration")
+        }
 
         chatCommandManager.register(
             HyperChatCommandRegistration(
@@ -114,7 +130,7 @@ class HyperZoneLoginMain @Inject constructor(
         proxy.commandManager.register("hzl", HyperZoneLoginCommand())
         proxy.eventManager.register(this, EventListener())
         proxy.eventManager.register(this, HyperZonePlayerManager)
-        proxy.eventManager.register(this, limboServerManager)
+        // If Limbo was present, we've already registered its event listener above
 
         logInternalTestWarning()
 
@@ -130,6 +146,14 @@ class HyperZoneLoginMain @Inject constructor(
         } catch (e: Exception) {
             logger.error("加载模块 ${module.javaClass.name} 失败: ${e.message}", e)
         }
+    }
+
+    /**
+     * Trigger authentication flow in Limbo for a proxy player if Limbo is present.
+     * Safe no-op if Limbo integration is not available.
+     */
+    fun triggerLimboAuthForPlayer(player: com.velocitypowered.api.proxy.Player) {
+        limboServerManager?.authPlayer(player)
     }
 
     private fun logInternalTestWarning() {

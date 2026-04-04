@@ -1,11 +1,21 @@
 package icu.h2l.api.limbo
 
-import net.elytrium.limboapi.api.Limbo
+import com.velocitypowered.api.command.CommandMeta
+import com.velocitypowered.api.command.SimpleCommand
 
-interface HyperZoneLimbo {
-    val authServer: Limbo
+/**
+ * Adapter interface for Limbo functionality used by the project.
+ * This keeps the API module free of a compile-time dependency on the
+ * Limbo third-party API; implementations (in the main plugin) can bridge
+ * to the real Limbo implementation when available.
+ */
+interface HyperZoneLimboAdapter {
+    fun registerCommand(meta: CommandMeta, command: SimpleCommand)
 }
 
 interface HyperZoneLimboProvider {
-    val limboAuth: HyperZoneLimbo
+    /**
+     * Returns the limbo adapter if available, or null when Limbo is not present.
+     */
+    val limboAdapter: HyperZoneLimboAdapter?
 }
