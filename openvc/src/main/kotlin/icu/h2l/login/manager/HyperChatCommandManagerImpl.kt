@@ -5,18 +5,18 @@ import com.velocitypowered.api.command.SimpleCommand
 import com.velocitypowered.api.proxy.ProxyServer
 import icu.h2l.api.command.HyperChatCommandManager
 import icu.h2l.api.command.HyperChatCommandRegistration
-import icu.h2l.api.limbo.HyperZoneLimboAdapter
+import icu.h2l.api.vServer.HyperZoneVServerAdapter
 import net.kyori.adventure.text.Component
 import java.util.concurrent.ConcurrentHashMap
 
 object HyperChatCommandManagerImpl : HyperChatCommandManager {
     private val commands = ConcurrentHashMap<String, HyperChatCommandRegistration>()
     @Volatile
-    private var limboAdapter: HyperZoneLimboAdapter? = null
+    private var limboAdapter: HyperZoneVServerAdapter? = null
     @Volatile
     private var proxyServer: ProxyServer? = null
 
-    fun bindLimbo(proxy: ProxyServer, adapter: HyperZoneLimboAdapter?) {
+    fun bindLimbo(proxy: ProxyServer, adapter: HyperZoneVServerAdapter?) {
         proxyServer = proxy
         limboAdapter = adapter
         getRegisteredCommands().forEach { registerToLimbo(it) }

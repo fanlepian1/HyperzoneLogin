@@ -1,4 +1,4 @@
-package icu.h2l.api.limbo
+package icu.h2l.api.vServer
 
 import com.velocitypowered.api.command.CommandMeta
 import com.velocitypowered.api.command.SimpleCommand
@@ -9,13 +9,13 @@ import com.velocitypowered.api.command.SimpleCommand
  * Limbo third-party API; implementations (in the main plugin) can bridge
  * to the real Limbo implementation when available.
  */
-interface HyperZoneLimboAdapter {
+interface HyperZoneVServerAdapter {
     fun registerCommand(meta: CommandMeta, command: SimpleCommand)
 }
 
-interface HyperZoneLimboProvider {
+interface HyperZoneVServerProvider {
     /**
      * Returns the limbo adapter if available, or null when Limbo is not present.
      */
-    val limboAdapter: HyperZoneLimboAdapter?
+    val serverAdapter: HyperZoneVServerAdapter?
 }

@@ -9,8 +9,8 @@ import com.velocitypowered.api.proxy.ProxyServer
 import icu.h2l.api.command.HyperChatCommandManager
 import icu.h2l.api.command.HyperChatCommandManagerProvider
 import icu.h2l.api.command.HyperChatCommandRegistration
-import icu.h2l.api.limbo.HyperZoneLimboAdapter
-import icu.h2l.api.limbo.HyperZoneLimboProvider
+import icu.h2l.api.vServer.HyperZoneVServerAdapter
+import icu.h2l.api.vServer.HyperZoneVServerProvider
 import icu.h2l.api.module.HyperSubModule
 import icu.h2l.api.player.HyperZonePlayerAccessor
 import icu.h2l.api.player.HyperZonePlayerAccessorProvider
@@ -23,7 +23,7 @@ import icu.h2l.login.config.RemapConfig
 import icu.h2l.login.database.DatabaseConfig
 import icu.h2l.login.database.DatabaseHelper
 import icu.h2l.login.inject.network.VelocityNetworkModule
-import icu.h2l.login.limbo.LimboAuth
+import icu.h2l.login.limbo.VServerAuth
 import icu.h2l.login.limbo.command.ExitLimboCommand
 import icu.h2l.login.listener.EventListener
 import icu.h2l.login.manager.HyperChatCommandManagerImpl
@@ -44,12 +44,12 @@ class HyperZoneLoginMain @Inject constructor(
     val logger: ComponentLogger,
     @DataDirectory private val dataDirectory: Path,
     private val injector: Injector
-) : HyperZoneLimboProvider, HyperZonePlayerAccessorProvider, HyperChatCommandManagerProvider {
+) : HyperZoneVServerProvider, HyperZonePlayerAccessorProvider, HyperChatCommandManagerProvider {
     lateinit var loginServerManager: LoginServerManager
-    var limboServerManager: LimboAuth? = null
+    var limboServerManager: VServerAuth? = null
     lateinit var databaseManager: icu.h2l.login.manager.DatabaseManager
     lateinit var databaseHelper: DatabaseHelper
-    override val limboAdapter: HyperZoneLimboAdapter?
+    override val serverAdapter: HyperZoneVServerAdapter?
         get() = limboServerManager
     override val hyperZonePlayers: HyperZonePlayerAccessor
         get() = HyperZonePlayerManager
@@ -96,7 +96,7 @@ class HyperZoneLoginMain @Inject constructor(
         val limboPluginPresent = server.pluginManager.getPlugin("limboapi").isPresent
         if (limboPluginPresent) {
             try {
-                val limbo = LimboAuth(server)
+                val limbo = VServerAuth(server)
                 limbo.load()
                 limboServerManager = limbo
                 // bind adapter (not the third-party Limbo type)

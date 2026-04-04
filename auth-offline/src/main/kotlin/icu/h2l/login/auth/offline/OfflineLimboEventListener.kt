@@ -1,12 +1,12 @@
 package icu.h2l.login.auth.offline
 
 import com.velocitypowered.api.event.Subscribe
-import icu.h2l.api.event.limbo.LimboSpawnEvent
+import icu.h2l.api.event.vServer.VServerEvent
 import net.kyori.adventure.text.Component
 
 class OfflineLimboEventListener {
     @Subscribe
-    fun onLimboSpawn(event: LimboSpawnEvent) {
+    fun onLimboSpawn(event: VServerEvent) {
         if (event.proxyPlayer.isOnlineMode) return
 
         event.hyperZonePlayer.sendMessage(Component.text("§e[HyperZoneLogin] 可用离线命令："))

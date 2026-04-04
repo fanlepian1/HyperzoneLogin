@@ -1,7 +1,7 @@
 package icu.h2l.login.limbo.handler
 
 import com.velocitypowered.api.proxy.Player
-import icu.h2l.api.event.limbo.LimboSpawnEvent
+import icu.h2l.api.event.vServer.VServerEvent
 import icu.h2l.api.player.HyperZonePlayer
 import icu.h2l.login.HyperZoneLoginMain
 import icu.h2l.login.player.OpenVcHyperZonePlayer
@@ -19,7 +19,7 @@ class LimboAuthSessionHandler(
         player.disableFalling()
 
         HyperZoneLoginMain.getInstance().proxy.eventManager.fire(
-            LimboSpawnEvent(proxyPlayer, hyperZonePlayer)
+            VServerEvent(proxyPlayer, hyperZonePlayer)
         )
     }
 
