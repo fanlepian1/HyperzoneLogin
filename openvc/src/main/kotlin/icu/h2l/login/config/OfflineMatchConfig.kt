@@ -50,8 +50,6 @@ class OfflineMatchConfig {
 
     @ConfigSerializable
     class Advanced {
-        @Comment("开启debug模式")
-        @JvmField
-        val debug = true
+        // Advanced settings moved to MiscConfig
     }
 }

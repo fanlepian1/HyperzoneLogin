@@ -20,6 +20,7 @@ import icu.h2l.login.command.HyperZoneLoginCommand
 import icu.h2l.login.config.DatabaseSourceConfig
 import icu.h2l.login.config.OfflineMatchConfig
 import icu.h2l.login.config.RemapConfig
+import icu.h2l.login.config.MiscConfig
 import icu.h2l.login.database.DatabaseConfig
 import icu.h2l.login.database.DatabaseHelper
 import icu.h2l.login.inject.network.VelocityNetworkModule
@@ -62,6 +63,7 @@ class HyperZoneLoginMain @Inject constructor(
         private lateinit var offlineMatchConfig: OfflineMatchConfig
         private lateinit var databaseSourceConfig: DatabaseSourceConfig
         private lateinit var remapConfig: RemapConfig
+        private lateinit var miscConfig: MiscConfig
 
         @JvmStatic
         fun getInstance(): HyperZoneLoginMain = instance
@@ -74,6 +76,9 @@ class HyperZoneLoginMain @Inject constructor(
         
         @JvmStatic
         fun getRemapConfig(): RemapConfig = remapConfig
+
+        @JvmStatic
+        fun getMiscConfig(): MiscConfig = miscConfig
     }
 
     init {
@@ -86,6 +91,7 @@ class HyperZoneLoginMain @Inject constructor(
         registerApiLogger()
         loadDatabaseConfig()
         loadRemapConfig()
+        loadMiscConfig()
         connectDatabase()
         // 创建基础表（Profile 表等）
         createBaseTables()
@@ -254,7 +260,38 @@ class HyperZoneLoginMain @Inject constructor(
             remapConfig = config
         }
     }
-    
+
+    private fun loadMiscConfig() {
+        val path = dataDirectory.resolve("misc.conf")
+        val firstCreation = Files.notExists(path)
+        val loader = HoconConfigurationLoader.builder()
+            .defaultOptions { opts: ConfigurationOptions ->
+                opts
+                    .shouldCopyDefaults(true)
+                    .header(
+                        """
+                            HyperZoneLogin Misc Configuration | by ksqeib
+                            
+                        """.trimIndent()
+                    ).serializers { s ->
+                        s.registerAnnotatedObjects(
+                            ObjectMapper.factoryBuilder().addDiscoverer(dataClassFieldDiscoverer()).build()
+                        )
+                    }
+            }
+            .path(path)
+            .build()
+        val node = loader.load()
+        val config = node.get(MiscConfig::class.java)
+        if (firstCreation) {
+            node.set(config)
+            loader.save(node)
+        }
+        if (config != null) {
+            miscConfig = config
+        }
+    }
+
     private fun connectDatabase() {
         logger.info("正在初始化数据库...")
         

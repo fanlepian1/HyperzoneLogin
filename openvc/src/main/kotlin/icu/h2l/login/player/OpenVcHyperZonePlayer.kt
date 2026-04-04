@@ -4,8 +4,8 @@ import com.velocitypowered.api.proxy.Player
 import com.velocitypowered.api.util.GameProfile
 import icu.h2l.api.db.Profile
 import icu.h2l.api.player.HyperZonePlayer
-import icu.h2l.login.HyperZoneLoginMain
 import icu.h2l.api.util.RemapUtils
+import icu.h2l.login.HyperZoneLoginMain
 import net.elytrium.limboapi.api.player.LimboPlayer
 import net.kyori.adventure.text.Component
 import java.util.*
@@ -121,6 +121,9 @@ class OpenVcHyperZonePlayer(
     }
 
     override fun getGameProfile(): GameProfile {
+        if (!HyperZoneLoginMain.getMiscConfig().enableReplaceGameProfile) {
+            return proxyPlayer!!.gameProfile
+        }
         val resolvedProfile = getProfile()
         return GameProfile(
             resolvedProfile!!.uuid,
