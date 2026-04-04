@@ -169,7 +169,7 @@ class NettyLoginSessionHandler(
                     val userName: String = login.getUsername()
                     val host = if (inbound.rawVirtualHost.isPresent) inbound.rawVirtualHost.get() else ""
 
-                    val openPreLoginEvent = OpenPreLoginEvent(holderUuid!!, userName, host,mcConnection.channel)
+                    val openPreLoginEvent = OpenPreLoginEvent(holderUuid!!, userName, host, mcConnection.channel)
                     injector.proxy.eventManager.fire(openPreLoginEvent).thenRun {
                         onlineMode = openPreLoginEvent.isOnline
                         if (openPreLoginEvent.isOnline) {
@@ -234,9 +234,16 @@ class NettyLoginSessionHandler(
                     return@thenRunAsync
                 }
 
+                val getProfile = onlineAuthEvent.gameProfile
+
+                if (!onlineAuthEvent.allow) {
+                    inbound.disconnect(onlineAuthEvent.disconnectMessage)
+                    return@thenRunAsync
+                }
+
                 val authSessionHandler =
                     createHandler(
-                        injector.proxy, inbound, onlineAuthEvent.gameProfile, online,
+                        injector.proxy, inbound, getProfile, online,
                         UUID.randomUUID().toString() // For LoginEvent, not important
                     )
 
@@ -288,7 +295,6 @@ class NettyLoginSessionHandler(
             mcConnection.close(true)
         }
     }
-
 
 
     private fun createHandler(

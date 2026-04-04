@@ -1,6 +1,11 @@
+import org.gradle.jvm.tasks.Jar
+import org.gradle.api.publish.maven.MavenPublication
+
 plugins {
     alias(libs.plugins.kotlin)
+    id("maven-publish")
 }
+
 
 group = "icu.h2l.login"
 version = "1.0.0-SNAPSHOT"
@@ -27,4 +32,28 @@ dependencies {
 
 tasks.test {
     useJUnitPlatform()
+}
+
+// Publish configuration to allow `api` to be published to the local Maven repository
+// Use `./gradlew :api:publishToMavenLocal` to publish.
+publishing {
+    publications {
+        create<org.gradle.api.publish.maven.MavenPublication>("mavenJava") {
+            groupId = project.group.toString()
+            artifactId = "api"
+            version = project.version.toString()
+            from(components["java"])
+
+            // include sources JAR for better IDE support when consumed from mavenLocal
+            val sourcesJar = tasks.register("sourcesJar", org.gradle.jvm.tasks.Jar::class) {
+                archiveClassifier.set("sources")
+                from(sourceSets.main.get().allSource)
+            }
+            artifact(sourcesJar)
+        }
+    }
+
+    repositories {
+        mavenLocal()
+    }
 }

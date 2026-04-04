@@ -14,6 +14,9 @@ dependencies {
     // the submodule is built as a standalone Velocity plugin and doesn't
     // bundle the API classes (avoids duplication in the main shadow jar).
     compileOnly(project(":api"))
+    // Direct reference to the main plugin module so we can call its API
+    // (e.g. HyperZoneLoginMain.getInstance().registerModule(...)) without reflection.
+    compileOnly(project(":openvc"))
 //    VC
     compileOnly("com.velocitypowered:velocity-api:3.4.0-SNAPSHOT")
     // Exposed ORM

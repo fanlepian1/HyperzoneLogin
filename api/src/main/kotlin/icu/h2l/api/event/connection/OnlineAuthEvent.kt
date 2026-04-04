@@ -4,6 +4,7 @@ import com.velocitypowered.api.event.annotation.AwaitingEvent
 import com.velocitypowered.api.event.connection.DisconnectEvent
 import com.velocitypowered.api.util.GameProfile
 import io.netty.channel.Channel
+import net.kyori.adventure.text.Component
 import java.util.*
 
 /**
@@ -24,4 +25,6 @@ class OnlineAuthEvent(
     val isOnline: Boolean
 ) {
     var gameProfile: GameProfile? = null
+    var allow:Boolean = true
+    var disconnectMessage: Component= Component.text("未知下层不允许原因")
 }
