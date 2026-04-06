@@ -68,7 +68,7 @@ class VelocityNetworkInjectorImpl(
 
             initializer.set(object : ViaChannelInitializer(old) {
                 override fun injectChannel(channel: Channel) {
-                    channel.pipeline().addLast("sl_r_rpl", ToBackendPacketReplacer())
+                    channel.pipeline().addLast("sl_r_rpl", ToBackendPacketReplacer(channel))
 //                    println("SVA: ${channel.pipeline().names()}")
                 }
             })

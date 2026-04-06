@@ -22,15 +22,20 @@ import icu.h2l.api.event.profile.ProfileSkinApplyEvent
 import icu.h2l.api.log.error
 import icu.h2l.api.player.HyperZonePlayer
 import icu.h2l.login.HyperZoneLoginMain
+import icu.h2l.login.inject.network.ChatSessionUpdatePacketIdResolver
 import icu.h2l.login.manager.HyperZonePlayerManager
+import io.netty.buffer.ByteBuf
 import io.netty.channel.Channel
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelOutboundHandlerAdapter
 import io.netty.channel.ChannelPromise
+import io.netty.util.ReferenceCountUtil
 import java.net.InetSocketAddress
 import java.util.function.Supplier
 
-class ToBackendPacketReplacer : ChannelOutboundHandlerAdapter() {
+class ToBackendPacketReplacer(
+    private val channel: Channel
+) : ChannelOutboundHandlerAdapter() {
     private lateinit var mcConnection: MinecraftConnection
     private lateinit var velocityServerConnection: VelocityServerConnection
     private lateinit var player: ConnectedPlayer
@@ -39,29 +44,58 @@ class ToBackendPacketReplacer : ChannelOutboundHandlerAdapter() {
     private lateinit var config: VelocityConfiguration
 
     private fun replaceMessage(
-        channel: Channel,
-        ctx: ChannelHandlerContext,
         msg: Any?
-    ) = when (msg) {
-//        BUNGEEGUARD LEGACY
-        is HandshakePacket -> {
-            genHandshake(ctx, msg)
-        }
-//        MC自己的
-        is ServerLoginPacket -> {
-            genServerLogin(ctx, msg)
-        }
-//        MODERN
-        is LoginPluginResponsePacket -> {
-//  com.velocitypowered.proxy.connection.backend.LoginSessionHandler.handle(com.velocitypowered.proxy.protocol.packet.LoginPluginMessagePacket)
-            genLoginPluginResponse(ctx, msg)
+    ): Any? {
+//        偷吃点东西 chat_session_update "AdaptivePoolingAllocator$AdaptiveByteBuf(ridx: 0, widx: 323, cap: 323)"，偷吃完可以retire
+
+        if (HyperZoneLoginMain.getMiscConfig().killChatSession) {
+            if (msg is ByteBuf) {
+                val packetID = readPacketId(msg)
+                packetID?.let {
+                    if (ChatSessionUpdatePacketIdResolver.isChatSessionUpdate(player.protocolVersion, it)) {
+//                        吃掉就结束了
+                        retire()
+                        return null
+                    }
+                }
+                return msg
+            }
         }
 
-        else -> msg
+        if (!HyperZoneLoginMain.getMiscConfig().enableReplaceGameProfile) {
+            return msg
+        }
+        if (msg is HandshakePacket) {
+            return genHandshake()
+        }
+        if (msg is ServerLoginPacket) {
+            return genServerLogin()
+        }
+        if (msg is LoginPluginResponsePacket) {
+//            如果不需要吃ChatSession，正常这是最后一个包
+            if (!HyperZoneLoginMain.getMiscConfig().killChatSession)
+                retire()
+            return genLoginPluginResponse(msg)
+        }
+        return msg
+    }
+
+    private fun readPacketId(msg: ByteBuf): Int? {
+        if (!msg.isReadable) {
+            return null
+        }
+
+        val duplicate = msg.duplicate()
+        return runCatching {
+            ProtocolUtils.readVarInt(duplicate)
+        }.getOrNull()
+    }
+
+    private fun retire() {
+        channel.pipeline().remove(this)
     }
 
     private fun genLoginPluginResponse(
-        ctx: ChannelHandlerContext,
         msg: LoginPluginResponsePacket
     ): LoginPluginResponsePacket {
         if (config.playerInfoForwardingMode == PlayerInfoForwarding.MODERN) {
@@ -92,7 +126,7 @@ class ToBackendPacketReplacer : ChannelOutboundHandlerAdapter() {
 
     private lateinit var fillAddr: InetSocketAddress
 
-    private fun genHandshake(ctx: ChannelHandlerContext, msg: HandshakePacket): HandshakePacket {
+    private fun genHandshake(): HandshakePacket {
         val forwardingMode: PlayerInfoForwarding? = config.playerInfoForwardingMode
 //        val player = HyperZonePlayerManager.getByChannel(ctx.channel()).proxyPlayer!! as ConnectedPlayer
 
@@ -177,7 +211,7 @@ class ToBackendPacketReplacer : ChannelOutboundHandlerAdapter() {
     }
 
 
-    private fun genServerLogin(ctx: ChannelHandlerContext, msg: ServerLoginPacket): ServerLoginPacket {
+    private fun genServerLogin(): ServerLoginPacket {
         if (player.identifiedKey == null
             && player.protocolVersion.noLessThan(ProtocolVersion.MINECRAFT_1_19_3)
         ) {
@@ -192,14 +226,16 @@ class ToBackendPacketReplacer : ChannelOutboundHandlerAdapter() {
 
     override fun write(ctx: ChannelHandlerContext, msg: Any?, promise: ChannelPromise?) {
         try {
-            if (!HyperZoneLoginMain.getMiscConfig().enableReplaceGameProfile) {
-                super.write(ctx, msg, promise)
-                return
-            }
             initFields(ctx)
 
 //        println("W: $msg")
-            super.write(ctx, replaceMessage(ctx.channel(), ctx, msg), promise)
+            val getMsg = replaceMessage(msg)
+            if (getMsg == null) {
+                ReferenceCountUtil.safeRelease(msg)
+                promise?.setSuccess()
+                return
+            }
+            super.write(ctx, getMsg, promise)
         } catch (t: Throwable) {
             // Log via the global API logger bridge so it's consistent with the rest of the project
             error(t) { "ToBackendPacketReplacer write failed: ${t.message}" }

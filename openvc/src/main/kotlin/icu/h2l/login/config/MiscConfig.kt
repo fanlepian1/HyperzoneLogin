@@ -11,6 +11,10 @@ class MiscConfig {
 
     @Comment("是否启用替换 GameProfile")
     @JvmField
-    val enableReplaceGameProfile: Boolean = false
+    val enableReplaceGameProfile: Boolean = true
+
+    @Comment("不给服务器发送 CHAT_SESSION_UPDATE包")
+    @JvmField
+    val killChatSession: Boolean = true
 }
 
