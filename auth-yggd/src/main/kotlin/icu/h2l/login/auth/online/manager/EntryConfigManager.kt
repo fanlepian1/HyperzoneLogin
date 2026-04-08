@@ -64,9 +64,9 @@ class EntryConfigManager(
                     debug { "跳过 example 文件夹: ${path.name}" }
                 }
                 // 递归扫描子目录
-                path.isDirectory() -> {
-                    scanAndLoadConfigs(path)
-                }
+//                path.isDirectory() -> {
+//                    scanAndLoadConfigs(path)
+//                }
                 // 加载 conf 配置文件
                 path.name.endsWith(CONFIG_EXTENSION, ignoreCase = true) -> {
                     loadConfig(path)
@@ -104,24 +104,36 @@ class EntryConfigManager(
 
             val node = loader.load()
             val config = node.get(EntryConfig::class.java)
-
-            if (config != null) {
-                // 验证配置有效性
-                // 检查 ID 是否重复
-                if (entryConfigs.values.any { it.id == config.id }) {
-                    error { "配置文件 ${path.fileName} 的 ID ${config.id} 与其他配置重复，跳过加载" }
+                ?: run {
+                    error { "无法解析配置文件: ${path.fileName}" }
                     return
                 }
 
-                val configName = path.fileName.toString().removeSuffix(CONFIG_EXTENSION)
-                entryConfigs[configName] = config
-                debug { "成功加载配置: $configName (ID: ${config.id}, Name: ${config.name})" }
+            val resolvedUrl = config.yggdrasil.url.trim()
 
-                // 发布 Entry 注册事件
-                proxyServer.eventManager.fireAndForget(EntryRegisterEvent(configName, config))
-            } else {
-                error { "无法解析配置文件: ${path.fileName}" }
+            // 验证配置有效性
+            // 检查 ID 是否重复
+            if (entryConfigs.values.any { it.id == config.id }) {
+                error { "配置文件 ${path.fileName} 的 ID ${config.id} 与其他配置重复，跳过加载" }
+                return
             }
+
+            if (resolvedUrl.isBlank()) {
+                error {
+                    "配置文件 ${path.fileName} 的 yggdrasilAuth.url 为空，跳过加载。" +
+                        "当前读取路径: ${path.toAbsolutePath()}。" +
+                        "请确认你修改的是插件数据目录下的 entry/*.conf，且不要放在 entry/example 中；" +
+                        "src/main/resources/example 下的示例文件也不会在运行时直接加载。"
+                }
+                return
+            }
+
+            val configName = path.fileName.toString().removeSuffix(CONFIG_EXTENSION)
+            entryConfigs[configName] = config
+            debug { "成功加载配置: $configName (ID: ${config.id}, Name: ${config.name}, Url: $resolvedUrl)" }
+
+            // 发布 Entry 注册事件
+            proxyServer.eventManager.fireAndForget(EntryRegisterEvent(configName, config))
         } catch (e: Exception) {
             error(e) { "加载配置文件 ${path.fileName} 时出错: ${e.message}" }
         }
@@ -135,86 +147,70 @@ class EntryConfigManager(
         Files.createDirectories(exampleDir)
 
         val examplePath = exampleDir.resolve("example$CONFIG_EXTENSION")
-        val loader = HoconConfigurationLoader.builder()
-            .defaultOptions { opts: ConfigurationOptions ->
-                opts
-                    .shouldCopyDefaults(true)
-                    .header(
-                        """
-                        HyperZoneLogin Entry Configuration - Example
-                        这是一个示例配置文件，位于 example 文件夹中的配置不会被加载
-                        复制此文件到 entry 文件夹（非 example 子文件夹）中并修改即可使用
-                        
-                        """.trimIndent()
-                    )
-                    .serializers { s ->
-                        s.registerAnnotatedObjects(
-                            ObjectMapper.factoryBuilder()
-                                .addDiscoverer(dataClassFieldDiscoverer())
-                                .build()
-                        )
-                    }
-            }
-            .path(examplePath)
-            .build()
-
-        val node = loader.createNode()
-        val exampleConfig = EntryConfig()
-        node.set(EntryConfig::class.java, exampleConfig)
-        loader.save(node)
+        createConfigFile(
+            path = examplePath,
+            config = EntryConfig(),
+            header =
+                """
+                HyperZoneLogin Entry Configuration - Example
+                这是一个示例配置文件，位于 example 文件夹中的配置不会被加载
+                复制此文件到 entry 文件夹（非 example 子文件夹）中并修改即可使用
+                
+                """.trimIndent()
+        )
 
         debug { "创建示例配置文件: ${examplePath.fileName}" }
     }
 
     /**
-     * 创建默认配置文件（Mojang 和 Offline）
+     * 创建默认配置文件（Mojang）
      */
     private fun createDefaultConfigs(entryDir: Path) {
-        // 创建 Mojang 配置 - 包含 URL 配置
         val mojangPath = entryDir.resolve("mojang$CONFIG_EXTENSION")
-        val mojangLoader = HoconConfigurationLoader.builder()
-            .defaultOptions { opts: ConfigurationOptions ->
-                opts.header(
-                    """
-                    HyperZoneLogin Entry Configuration - Mojang
-                    Mojang 官方正版验证服务配置
-                    
-                    """.trimIndent()
-                )
+        val mojangConfig = EntryConfig().apply {
+            id = "mojang"
+            name = "Mojang Official"
+            yggdrasil = EntryConfig.YggdrasilAuthConfig().apply {
+                url = "https://sessionserver.mojang.com/session/minecraft/hasJoined?username={username}&serverId={serverId}{ip}"
             }
-            .path(mojangPath)
-            .build()
-
-        val mojangNode = mojangLoader.createNode()
-        mojangNode.node("id").set("mojang")
-        mojangNode.node("name").set("Mojang Official")
-        mojangNode.node("yggdrasilAuth", "url").set("https://sessionserver.mojang.com/session/minecraft/hasJoined?username={username}&serverId={serverId}{ip}")
-        mojangLoader.save(mojangNode)
-
-        debug { "创建默认配置文件: mojang.conf, offline.conf" }
-    }
-
-    /**
-     * 创建简化的配置文件（只包含指定字段）
-     */
-    private fun createSimpleConfigFile(path: Path, entries: Map<String, String>, header: String) {
-        val loader = HoconConfigurationLoader.builder()
-            .defaultOptions { opts: ConfigurationOptions ->
-                opts.header(header)
-            }
-            .path(path)
-            .build()
-
-        val node = loader.createNode()
-        entries.forEach { (key, value) ->
-            node.node(key).set(value)
         }
-        loader.save(node)
+
+        createConfigFile(
+            path = mojangPath,
+            config = mojangConfig,
+            header =
+                """
+                HyperZoneLogin Entry Configuration - Mojang
+                Mojang 官方正版验证服务配置
+                
+                """.trimIndent()
+        )
+
+        debug { "创建默认配置文件: mojang.conf" }
+
+        val littleskinPath = entryDir.resolve("littleskin$CONFIG_EXTENSION")
+        val littleskinConfig = EntryConfig().apply {
+            id = "littleskin"
+            name = "Little Skin"
+            yggdrasil = EntryConfig.YggdrasilAuthConfig().apply {
+                url = "https://littleskin.cn/api/yggdrasil/sessionserver/session/minecraft/hasJoined?username={username}&serverId={serverId}{ip}"
+            }
+        }
+
+        createConfigFile(
+            path = littleskinPath,
+            config = littleskinConfig,
+            header =
+                """
+                HyperZoneLogin Entry Configuration - Little Skin
+                Little Skin 第三方验证服务配置
+                
+                """.trimIndent()
+        )
+
+        debug { "创建默认配置文件: littleskin.conf" }
     }
 
-    /**
-     * 创建配置文件的通用方法（包含所有默认值）
-     */
     private fun createConfigFile(path: Path, config: EntryConfig, header: String) {
         val loader = HoconConfigurationLoader.builder()
             .defaultOptions { opts: ConfigurationOptions ->
@@ -236,6 +232,8 @@ class EntryConfigManager(
         node.set(EntryConfig::class.java, config)
         loader.save(node)
     }
+
+
 
     /**
      * 获取所有加载的配置

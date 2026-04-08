@@ -23,7 +23,7 @@ object ExtraUuidUtils {
         }
      }
 
-     private fun getNormalOfflineUUID(username: String): UUID {
+    fun getNormalOfflineUUID(username: String): UUID {
          return UUID.nameUUIDFromBytes(("OfflinePlayer:$username").toByteArray(StandardCharsets.UTF_8))
      }
  }

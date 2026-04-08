@@ -3,6 +3,7 @@ package icu.h2l.login.auth.online.req
 import com.google.common.net.UrlEscapers
 import com.google.gson.Gson
 import com.velocitypowered.api.util.GameProfile
+import icu.h2l.api.log.debug
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.net.URI
@@ -27,6 +28,7 @@ class MojangStyleAuthRequest(
     ): AuthenticationResult = withContext(Dispatchers.IO) {
         try {
             val url = buildAuthUrl(username, serverId, playerIp)
+            debug { "[YggdrasilAuth] 即将发起在线认证请求: entry=${config.name}, url=$url" }
             val request = buildHttpRequest(url)
             
             val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
@@ -42,7 +44,7 @@ class MojangStyleAuthRequest(
 
     /**
      * 构建验证URL
-     * 使用YggdrasilAuthConfig中的URL模板，替换占位符
+     * 使用 EntryConfig.YggdrasilAuthConfig 中的 URL 模板替换占位符
      */
     private fun buildAuthUrl(username: String, serverId: String, playerIp: String?): String {
         val escapedUsername = UrlEscapers.urlFormParameterEscaper().escape(username)

@@ -457,7 +457,7 @@ class YggdrasilAuthModule(
 
             // 构建AuthServerConfig
             val authServerConfig = AuthServerConfig(
-                url = entryConfig.yggdrasilAuth.url,
+                url = entryConfig.yggdrasil.url,
                 name = entryConfig.name,
                 connectTimeout = Duration.ofSeconds(5),
                 readTimeout = Duration.ofSeconds(10)

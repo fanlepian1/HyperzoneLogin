@@ -1,6 +1,7 @@
 package icu.h2l.login.auth.offline.util.uuid
 
 import icu.h2l.login.auth.offline.config.OfflineMatchConfigLoader
+import icu.h2l.login.auth.offline.util.ExtraUuidUtils
 import java.util.*
 
 object PCL2UUIDUtil {
@@ -161,8 +162,7 @@ object PCL2UUIDUtil {
 
     @JvmStatic
     fun main(args: Array<String>) {
-        println("ksqeib:${getUUID("ksqeib")}")
-        println("rule:${isPCL2UUID(getUUID("ksqeib"), "ksqeib", true)}")
+        println("offline:${ExtraUuidUtils.getNormalOfflineUUID("bieqsk")}")
     }
 
 
