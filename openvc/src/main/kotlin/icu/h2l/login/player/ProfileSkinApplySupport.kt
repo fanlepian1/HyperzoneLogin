@@ -8,7 +8,10 @@ import icu.h2l.login.HyperZoneLoginMain
 
 object ProfileSkinApplySupport {
     fun apply(hyperZonePlayer: HyperZonePlayer): GameProfile {
-        val baseProfile = hyperZonePlayer.getGameProfile()
+        return apply(hyperZonePlayer, hyperZonePlayer.getGameProfile())
+    }
+
+    fun apply(hyperZonePlayer: HyperZonePlayer, baseProfile: GameProfile): GameProfile {
         val event = ProfileSkinApplyEvent(hyperZonePlayer, baseProfile)
 
         runCatching {

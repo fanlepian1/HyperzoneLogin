@@ -3,11 +3,13 @@ package icu.h2l.login.listener
 import com.velocitypowered.api.event.Subscribe
 import com.velocitypowered.api.event.player.GameProfileRequestEvent
 import icu.h2l.api.connection.disconnectWithMessage
+import icu.h2l.api.connection.getNettyChannel
 import icu.h2l.api.event.connection.OpenStartAuthEvent
 import icu.h2l.api.event.connection.OpenPreLoginEvent
 import icu.h2l.api.util.RemapUtils
 import icu.h2l.login.HyperZoneLoginMain
 import icu.h2l.login.manager.HyperZonePlayerManager
+import icu.h2l.login.player.ProfileSkinApplySupport
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
 
@@ -68,6 +70,16 @@ class EventListener {
             )
             return
         }
-//        这里是错误的额外处理位置，不要替换任何profile在这里
+
+//        这里不做自己看不见自己皮肤
+        runCatching {
+            val hyperPlayer = HyperZonePlayerManager.getByChannel(event.connection.getNettyChannel())
+            ProfileSkinApplySupport.apply(hyperPlayer)
+        }.onSuccess { mergedProfile ->
+            event.gameProfile = mergedProfile
+        }.onFailure { throwable ->
+            HyperZoneLoginMain.getInstance().logger.error("GameProfile 预登录皮肤修复失败: ${throwable.message}", throwable)
+        }
+
     }
 }
