@@ -19,7 +19,7 @@ import com.velocitypowered.proxy.protocol.packet.EncryptionRequestPacket
 import com.velocitypowered.proxy.protocol.packet.EncryptionResponsePacket
 import com.velocitypowered.proxy.protocol.packet.ServerLoginPacket
 import com.velocitypowered.proxy.util.VelocityProperties
-import icu.h2l.api.event.connection.OnlineAuthEvent
+import icu.h2l.api.event.connection.OpenStartAuthEvent
 import icu.h2l.api.event.connection.OpenPreLoginEvent
 import icu.h2l.login.inject.network.NettyReflectionHelper
 import icu.h2l.login.inject.network.NettyReflectionHelper.fireLogin
@@ -199,7 +199,7 @@ class NettyLoginSessionHandler(
 
         val remoteAddress = mcConnection.remoteAddress as InetSocketAddress
         val playerIp = remoteAddress.hostString
-        val onlineAuthEvent = OnlineAuthEvent(
+        val openStartAuthEvent = OpenStartAuthEvent(
             login.getUsername(),
             login.holderUuid!!,
             serverId!!,
@@ -209,9 +209,9 @@ class NettyLoginSessionHandler(
         )
         val preProfile = GameProfile(login.holderUuid, login.username, Collections.emptyList())
 
-        onlineAuthEvent.gameProfile = preProfile
+        openStartAuthEvent.gameProfile = preProfile
 
-        injector.proxy.eventManager.fire(onlineAuthEvent).thenRunAsync(
+        injector.proxy.eventManager.fire(openStartAuthEvent).thenRunAsync(
             {
                 if (mcConnection.isClosed) {
                     // The player disconnected after we authenticated them.
@@ -234,10 +234,10 @@ class NettyLoginSessionHandler(
                     return@thenRunAsync
                 }
 
-                val getProfile = onlineAuthEvent.gameProfile
+                val getProfile = openStartAuthEvent.gameProfile
 
-                if (!onlineAuthEvent.allow) {
-                    inbound.disconnect(onlineAuthEvent.disconnectMessage)
+                if (!openStartAuthEvent.allow) {
+                    inbound.disconnect(openStartAuthEvent.disconnectMessage)
                     return@thenRunAsync
                 }
 

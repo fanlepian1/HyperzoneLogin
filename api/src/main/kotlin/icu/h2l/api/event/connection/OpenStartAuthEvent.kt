@@ -16,7 +16,7 @@ import java.util.*
  * [AwaitingEvent] contract.
  */
 @AwaitingEvent
-class OnlineAuthEvent(
+class OpenStartAuthEvent(
     val userName: String,
     val userUUID: UUID,
     val serverId: String,

@@ -17,6 +17,7 @@ class OpenVcHyperZonePlayer(
 //    最开始客户端传入的，不可信
     override var userName: String,
     override var uuid: UUID,
+    isOnline: Boolean,
 ) : HyperZonePlayer {
 
     private var proxyPlayer: Player? = null
@@ -32,6 +33,7 @@ class OpenVcHyperZonePlayer(
     private val postAuthTargetServerName = AtomicReference<String?>(null)
     private val onlineAuthName = AtomicReference<String?>(null)
     private val onlineAuthUuid = AtomicReference<UUID?>(null)
+    private val onlineState = AtomicBoolean(isOnline)
 
     @Volatile
     private var limboPlayer: LimboPlayer? = null
@@ -191,9 +193,12 @@ class OpenVcHyperZonePlayer(
         initialGameProfile = profile
     }
 
-    fun recordOnlineAuthIdentity(name: String, uuid: UUID) {
-        onlineAuthName.set(name)
-        onlineAuthUuid.set(uuid)
+    fun isOnlinePlayer(): Boolean {
+        return onlineState.get()
+    }
+
+    fun setOnlinePlayer(isOnline: Boolean) {
+        onlineState.set(isOnline)
     }
 
     fun getOnlineAuthName(): String? {

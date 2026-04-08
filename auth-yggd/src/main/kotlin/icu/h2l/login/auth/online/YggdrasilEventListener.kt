@@ -2,7 +2,7 @@ package icu.h2l.login.auth.online
 
 import com.velocitypowered.api.event.Subscribe
 import com.velocitypowered.api.event.connection.DisconnectEvent
-import icu.h2l.api.event.connection.OnlineAuthEvent
+import icu.h2l.api.event.connection.OpenStartAuthEvent
 import icu.h2l.api.event.vServer.VServerJoinEvent
 import icu.h2l.api.log.debug
 import icu.h2l.api.player.getChannel
@@ -16,7 +16,7 @@ class YggdrasilEventListener(
     private val pendingContexts = ConcurrentHashMap<Channel, PendingAuthContext>()
 
     @Subscribe
-    fun onOnlineAuth(event: OnlineAuthEvent) {
+    fun onOnlineAuth(event: OpenStartAuthEvent) {
         if (!event.isOnline) return
 
         pendingContexts[event.channel] = PendingAuthContext(

@@ -19,11 +19,13 @@ import com.velocitypowered.proxy.protocol.packet.HandshakePacket
 import com.velocitypowered.proxy.protocol.packet.LoginPluginResponsePacket
 import com.velocitypowered.proxy.protocol.packet.ServerLoginPacket
 import icu.h2l.api.event.profile.ProfileSkinApplyEvent
+import icu.h2l.api.log.debug
 import icu.h2l.api.log.error
 import icu.h2l.api.player.HyperZonePlayer
 import icu.h2l.login.HyperZoneLoginMain
 import icu.h2l.login.inject.network.ChatSessionUpdatePacketIdResolver
 import icu.h2l.login.manager.HyperZonePlayerManager
+import icu.h2l.login.player.OpenVcHyperZonePlayer
 import io.netty.buffer.ByteBuf
 import io.netty.channel.Channel
 import io.netty.channel.ChannelHandlerContext
@@ -46,15 +48,19 @@ class ToBackendPacketReplacer(
     private fun replaceMessage(
         msg: Any?
     ): Any? {
-//        偷吃点东西 chat_session_update "AdaptivePoolingAllocator$AdaptiveByteBuf(ridx: 0, widx: 323, cap: 323)"，偷吃完可以retire
+        val offlinePlayer = (hyperPlayer as? OpenVcHyperZonePlayer)?.isOnlinePlayer() == false
+        val bypassProfileReplacement = shouldBypassForLoginServer()
 
+//        离线没有这部分逻辑
+//        偷吃点东西 chat_session_update "AdaptivePoolingAllocator$AdaptiveByteBuf(ridx: 0, widx: 323, cap: 323)"，
+//        偷吃完可以retire
         if (HyperZoneLoginMain.getMiscConfig().killChatSession) {
             if (msg is ByteBuf) {
                 val packetID = readPacketId(msg)
                 packetID?.let {
                     if (ChatSessionUpdatePacketIdResolver.isChatSessionUpdate(player.protocolVersion, it)) {
 //                        吃掉就结束了
-                        retire()
+                        retire("chat session update packet consumed")
                         return null
                     }
                 }
@@ -63,19 +69,43 @@ class ToBackendPacketReplacer(
         }
 
         if (!HyperZoneLoginMain.getMiscConfig().enableReplaceGameProfile) {
+            if (msg is LoginPluginResponsePacket && (!HyperZoneLoginMain.getMiscConfig().killChatSession || offlinePlayer)) {
+                retire(
+                    if (offlinePlayer) {
+                        "offline player login plugin response passthrough"
+                    } else {
+                        "login plugin response handled without chat session stripping"
+                    }
+                )
+            }
             return msg
         }
+
         if (msg is HandshakePacket) {
-            return genHandshake()
+            return if (bypassProfileReplacement) msg else genHandshake()
         }
         if (msg is ServerLoginPacket) {
-            return genServerLogin()
+            val forwarded = if (bypassProfileReplacement) msg else genServerLogin()
+//            if (offlinePlayer) {
+//                retire("offline player server login handled")
+//            }
+            return forwarded
         }
         if (msg is LoginPluginResponsePacket) {
-//            如果不需要吃ChatSession，正常这是最后一个包
-            if (!HyperZoneLoginMain.getMiscConfig().killChatSession)
-                retire()
-            return genLoginPluginResponse(msg)
+//            如果不需要吃ChatSession，或者离线玩家不会发该包，正常这里就是最后一个关键包
+            if (!HyperZoneLoginMain.getMiscConfig().killChatSession || offlinePlayer)
+                retire(
+                    if (offlinePlayer) {
+                        "offline player login plugin response handled"
+                    } else {
+                        "login plugin response handled without chat session stripping"
+                    }
+                )
+            return if (bypassProfileReplacement) msg else genLoginPluginResponse(msg)
+        }
+
+        if (bypassProfileReplacement) {
+            return msg
         }
         return msg
     }
@@ -91,7 +121,20 @@ class ToBackendPacketReplacer(
         }.getOrNull()
     }
 
-    private fun retire() {
+    private fun retire(reason: String) {
+        val targetServerName = if (::velocityServerConnection.isInitialized) {
+            velocityServerConnection.server.serverInfo.name
+        } else {
+            "<uninitialized>"
+        }
+        val connectedServerName = if (::player.isInitialized) {
+            player.connectedServer?.server?.serverInfo?.name ?: "<none>"
+        } else {
+            "<uninitialized>"
+        }
+        debug {
+            "[ToBackendPacketReplacer] retire: reason=$reason, target=$targetServerName, connected=$connectedServerName, channel=$channel"
+        }
         channel.pipeline().remove(this)
     }
 
@@ -246,11 +289,6 @@ class ToBackendPacketReplacer(
         try {
             initFields(ctx)
 
-            if (shouldBypassForLoginServer()) {
-                retire()
-                super.write(ctx, msg, promise)
-                return
-            }
 
 //        println("W: $msg")
             val getMsg = replaceMessage(msg)

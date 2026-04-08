@@ -14,10 +14,15 @@ import java.util.concurrent.ConcurrentHashMap
 object HyperZonePlayerManager : HyperZonePlayerAccessor {
     private val playersByPlayer = ConcurrentHashMap<Channel, OpenVcHyperZonePlayer>()
 
-    override fun create(channel: Channel, userName: String, uuid: UUID): HyperZonePlayer {
-        return playersByPlayer.computeIfAbsent(channel) {
-            OpenVcHyperZonePlayer(userName,uuid)
-        }
+    override fun create(channel: Channel, userName: String, uuid: UUID, isOnline: Boolean): HyperZonePlayer {
+        return playersByPlayer.compute(channel) { _, existing ->
+            if (existing != null) {
+                existing.setOnlinePlayer(isOnline)
+                existing
+            } else {
+                OpenVcHyperZonePlayer(userName, uuid, isOnline)
+            }
+        }!!
     }
 
     override fun getByPlayer(player: Player): HyperZonePlayer {
