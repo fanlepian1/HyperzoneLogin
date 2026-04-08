@@ -14,6 +14,7 @@ import icu.h2l.api.profile.skin.ProfileSkinTextures
 import icu.h2l.login.profile.skin.config.MineSkinMethod
 import icu.h2l.login.profile.skin.config.ProfileSkinConfig
 import icu.h2l.login.profile.skin.db.ProfileSkinCacheRepository
+import icu.h2l.login.profile.skin.db.ProfileSkinCacheRepository.SaveResult
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
 import java.io.ByteArrayInputStream
@@ -50,13 +51,25 @@ class ProfileSkinService(
         val upstreamTextures = event.textures ?: extractTextures(event.authenticatedProfile)
         val source = (event.source ?: extractSkinSource(upstreamTextures))?.normalized()
         val sourceHash = source?.let(::sourceHash)
+        val trustedSignedEntry = isTrustedSignedEntry(event.entryId)
+        val shouldTrustSignedTextures = upstreamTextures?.isSigned == true
+                && config.preferUpstreamSignedTextures
+                && trustedSignedEntry
+        val shouldForceRestoreSignedTextures = upstreamTextures?.isSigned == true && !trustedSignedEntry
+        val shouldAttemptRestore = source != null && (shouldForceRestoreSignedTextures || config.restoreUnsignedTextures)
 
         debug {
-            "[ProfileSkinFlow] preprocess start: profile=$profileId, player=${event.hyperZonePlayer.userName}, entry=${event.entryId}, server=${event.serverUrl}, upstream=${describeTextures(upstreamTextures)}, source=${describeSource(source)}, sourceHash=${shortHash(sourceHash)}, preferSigned=${config.preferUpstreamSignedTextures}, restoreUnsigned=${config.restoreUnsignedTextures}"
+            "[ProfileSkinFlow] preprocess start: profile=$profileId, player=${event.hyperZonePlayer.userName}, entry=${event.entryId}, server=${event.serverUrl}, upstream=${describeTextures(upstreamTextures)}, source=${describeSource(source)}, sourceHash=${shortHash(sourceHash)}, preferSigned=${config.preferUpstreamSignedTextures}, trustedSignedEntry=$trustedSignedEntry, restoreUnsigned=${config.restoreUnsignedTextures}"
         }
 
-        if (upstreamTextures != null && upstreamTextures.isSigned && config.preferUpstreamSignedTextures) {
-            repository.save(profileId, source, upstreamTextures, sourceHash)
+        if (shouldTrustSignedTextures) {
+            logSaveResult(
+                repository.save(profileId, source, upstreamTextures, sourceHash),
+                profileId,
+                source,
+                sourceHash,
+                "trusted signed upstream"
+            )
             event.textures = upstreamTextures
             debug {
                 "[ProfileSkinFlow] preprocess selected signed upstream textures: profile=$profileId, source=${describeSource(source)}, textures=${describeTextures(upstreamTextures)}"
@@ -64,9 +77,21 @@ class ProfileSkinService(
             return
         }
 
-        if (source != null && config.restoreUnsignedTextures) {
+        if (upstreamTextures?.isSigned == true && !trustedSignedEntry) {
+            debug {
+                "[ProfileSkinFlow] preprocess signed upstream not trusted: profile=$profileId, entry=${event.entryId}, source=${describeSource(source)}"
+            }
+        }
+
+        if (shouldAttemptRestore) {
             repository.findBySourceHash(sourceHash!!)?.let { cached ->
-                repository.save(profileId, source, cached.textures, sourceHash)
+                logSaveResult(
+                    repository.save(profileId, source, cached.textures, sourceHash),
+                    profileId,
+                    source,
+                    sourceHash,
+                    "source cache hit"
+                )
                 event.textures = cached.textures
                 debug {
                     "[ProfileSkinFlow] preprocess source cache hit: profile=$profileId, sourceHash=${shortHash(sourceHash)}, cachedProfile=${cached.profileId}, textures=${describeTextures(cached.textures)}"
@@ -81,7 +106,13 @@ class ProfileSkinService(
             runCatching {
                 restoreTextures(source)
             }.onSuccess { restored ->
-                repository.save(profileId, source, restored, sourceHash)
+                logSaveResult(
+                    repository.save(profileId, source, restored, sourceHash),
+                    profileId,
+                    source,
+                    sourceHash,
+                    "restored textures"
+                )
                 event.textures = restored
                 debug {
                     "[ProfileSkinFlow] preprocess MineSkin restore success: profile=$profileId, source=${describeSource(source)}, textures=${describeTextures(restored)}"
@@ -92,12 +123,18 @@ class ProfileSkinService(
             }
         } else {
             debug {
-                "[ProfileSkinFlow] preprocess restore skipped: profile=$profileId, reason=${if (source == null) "missing source" else "restoreUnsignedTextures disabled"}, upstream=${describeTextures(upstreamTextures)}"
+                "[ProfileSkinFlow] preprocess restore skipped: profile=$profileId, reason=${describeRestoreSkipReason(source, shouldForceRestoreSignedTextures)}, upstream=${describeTextures(upstreamTextures)}"
             }
         }
 
         if (upstreamTextures != null) {
-            repository.save(profileId, source, upstreamTextures, sourceHash)
+            logSaveResult(
+                repository.save(profileId, source, upstreamTextures, sourceHash),
+                profileId,
+                source,
+                sourceHash,
+                "upstream fallback"
+            )
             event.textures = upstreamTextures
             debug {
                 "[ProfileSkinFlow] preprocess fallback to upstream textures: profile=$profileId, textures=${describeTextures(upstreamTextures)}, source=${describeSource(source)}"
@@ -320,6 +357,40 @@ class ProfileSkinService(
             return "none"
         }
         return value.take(12)
+    }
+
+    private fun isTrustedSignedEntry(entryId: String): Boolean {
+        return config.trustedSignedTextureEntries.any { it.equals(entryId, ignoreCase = true) }
+    }
+
+    private fun describeRestoreSkipReason(
+        source: ProfileSkinSource?,
+        shouldForceRestoreSignedTextures: Boolean
+    ): String {
+        if (source == null) {
+            return if (shouldForceRestoreSignedTextures) {
+                "missing source for untrusted signed textures"
+            } else {
+                "missing source"
+            }
+        }
+        return if (shouldForceRestoreSignedTextures) {
+            "untrusted signed textures without restore path"
+        } else {
+            "restoreUnsignedTextures disabled"
+        }
+    }
+
+    private fun logSaveResult(
+        result: SaveResult,
+        profileId: UUID,
+        source: ProfileSkinSource?,
+        sourceHash: String?,
+        reason: String
+    ) {
+        debug {
+            "[ProfileSkinFlow] preprocess cache save: profile=$profileId, result=$result, reason=$reason, source=${describeSource(source)}, sourceHash=${shortHash(sourceHash)}"
+        }
     }
 }
 

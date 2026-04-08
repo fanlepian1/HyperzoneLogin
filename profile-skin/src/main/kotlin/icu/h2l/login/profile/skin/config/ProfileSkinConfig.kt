@@ -11,6 +11,9 @@ class ProfileSkinConfig {
     @Comment("是否优先缓存并使用上游已经携带签名的 textures")
     var preferUpstreamSignedTextures: Boolean = true
 
+    @Comment("仅这些 entryId 的 signed textures 会被直接信任，其他 entry 即使 signed 也会优先尝试修复")
+    var trustedSignedTextureEntries: Set<String> = setOf("mojang")
+
     @Comment("当上游 textures 没有签名时，是否尝试通过 MineSkin 修复")
     var restoreUnsignedTextures: Boolean = true
 

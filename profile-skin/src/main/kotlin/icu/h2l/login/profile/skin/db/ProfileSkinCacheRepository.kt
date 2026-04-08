@@ -22,6 +22,12 @@ class ProfileSkinCacheRepository(
     private val databaseManager: HyperZoneDatabaseManager,
     private val table: ProfileSkinCacheTable
 ) {
+    enum class SaveResult {
+        INSERTED,
+        UPDATED,
+        SKIPPED
+    }
+
     fun findByProfileId(profileId: UUID): ProfileSkinCacheRecord? {
         return databaseManager.executeTransaction {
             table.selectAll().where { table.profileId eq profileId }
@@ -64,7 +70,32 @@ class ProfileSkinCacheRepository(
         }
     }
 
-    fun save(profileId: UUID, source: ProfileSkinSource?, textures: ProfileSkinTextures, sourceHash: String?) {
+    fun save(profileId: UUID, source: ProfileSkinSource?, textures: ProfileSkinTextures, sourceHash: String?): SaveResult {
+        val existing = findByProfileId(profileId)
+        if (existing != null && !hasSourceChanged(existing, source, sourceHash)) {
+            return SaveResult.SKIPPED
+        }
+
+        if (existing == null) {
+            return try {
+                databaseManager.executeTransaction {
+                    table.insert {
+                        it[table.profileId] = profileId
+                        it[table.sourceHash] = sourceHash
+                        it[skinUrl] = source?.skinUrl
+                        it[skinModel] = source?.model
+                        it[textureValue] = textures.value
+                        it[textureSignature] = textures.signature
+                        it[updatedAt] = System.currentTimeMillis()
+                    }
+                }
+                SaveResult.INSERTED
+            } catch (e: Exception) {
+                warn { "写入皮肤缓存失败: ${e.message}" }
+                SaveResult.SKIPPED
+            }
+        }
+
         val updated = try {
             databaseManager.executeTransaction {
                 table.update({ table.profileId eq profileId }) {
@@ -82,24 +113,37 @@ class ProfileSkinCacheRepository(
         }
 
         if (updated) {
-            return
+            return SaveResult.UPDATED
         }
 
-        try {
-            databaseManager.executeTransaction {
-                table.insert {
-                    it[table.profileId] = profileId
-                    it[table.sourceHash] = sourceHash
-                    it[skinUrl] = source?.skinUrl
-                    it[skinModel] = source?.model
-                    it[textureValue] = textures.value
-                    it[textureSignature] = textures.signature
-                    it[updatedAt] = System.currentTimeMillis()
-                }
-            }
-        } catch (e: Exception) {
-            warn { "写入皮肤缓存失败: ${e.message}" }
+        return SaveResult.SKIPPED
+    }
+
+    private fun hasSourceChanged(
+        existing: ProfileSkinCacheRecord,
+        source: ProfileSkinSource?,
+        sourceHash: String?
+    ): Boolean {
+        val newUrl = source?.skinUrl
+        val newModel = source?.model
+
+        if (newUrl.isNullOrBlank() && sourceHash.isNullOrBlank()) {
+            return false
         }
+
+        if (!sourceHash.isNullOrBlank() && sourceHash != existing.sourceHash) {
+            return true
+        }
+
+        if (!newUrl.isNullOrBlank() && newUrl != existing.skinUrl) {
+            return true
+        }
+
+        if (!newModel.isNullOrBlank() && newModel != existing.skinModel) {
+            return true
+        }
+
+        return false
     }
 }
 
