@@ -20,17 +20,12 @@
  */
 
 import icu.h2l.gradle.needPackageCompileOnly
-import org.gradle.api.artifacts.MinimalExternalModuleDependency
-import org.gradle.api.provider.Provider
-
-fun moduleId(dependency: Provider<MinimalExternalModuleDependency>): String {
-    val module = dependency.get().module
-    return "${module.group}:${module.name}"
-}
+import org.gradle.api.file.DuplicatesStrategy
+import org.gradle.api.tasks.SourceSetContainer
+import org.gradle.jvm.tasks.Jar
 
 plugins {
     alias(libs.plugins.kotlin)
-    alias(libs.plugins.shadow)
     id("icu.h2l.runtime-dependencies")
 }
 
@@ -74,21 +69,14 @@ dependencies {
 }
 
 tasks {
-    shadowJar {
+    named<Jar>("jar") {
         archiveBaseName.set("HyperZoneLogin")
         archiveClassifier.set("")
-        dependencies {
-//            mckotlin带
-            exclude(dependency(moduleId(libs.kotlinStdlib)))
-            exclude(dependency(moduleId(libs.kotlinReflect)))
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
-            exclude(dependency(moduleId(libs.jetbrainsAnnotations)))
-//           api
-            include(dependency(":api"))
-//            模块 are now separate Velocity plugins and should not be bundled here
-        }
-    }
-    build {
-        dependsOn(shadowJar)
+        val apiProject = project(":api")
+        val apiSourceSets = apiProject.extensions.getByType(SourceSetContainer::class.java)
+        dependsOn(apiProject.tasks.named("classes"))
+        from(apiSourceSets.named("main").get().output)
     }
 }

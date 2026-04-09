@@ -29,6 +29,7 @@ velocity / 主插件 (HyperZoneLogin 核心)
   - 子模块可以监听并响应这些事件进行表的创建或清理。
 - 运行库加载：
   - 主插件入口已切换为 Java bootstrap，以便在没有 `MCKotlin-Velocity` 的情况下先下载 Kotlin 运行时；
+  - 主插件产物现为普通 `jar`，仅额外并入 `api` 模块输出；第三方运行库不再随主插件一起打包；
   - 主插件会在 `onEnable` 最开始动态下载并注入 Configurate、Exposed、JDBC 驱动与连接池等运行库；
   - 同时也会下载 `mckotlin-velocity` 原先提供的 Kotlin StdLib / Kotlin Reflect / KotlinX Coroutines；
   - 运行库缓存目录为 `plugins/hyperzonelogin/libs/`；

@@ -26,10 +26,9 @@ plugins {
     base
     alias(libs.plugins.spotless)
     alias(libs.plugins.kotlin) apply false
-    alias(libs.plugins.shadow) apply false
 }
 
-fun toBlockCommentHeader(headerFile: java.io.File): String {
+fun toBlockCommentHeader(headerFile: File): String {
     val body = headerFile
         .readLines()
         .dropLastWhile { it.isBlank() }
@@ -89,12 +88,12 @@ val pluginBundleDir = layout.buildDirectory.dir("HZL")
 
 val collectPluginJars by tasks.registering(Sync::class) {
     group = "build"
-    description = "Collects all non-API plugin jars into one directory. velocity uses shadowJar; all other modules are prefixed with HZL-."
+    description = "Collects all non-API plugin jars into one directory, embedding the core plugin as HyperZoneLogin and prefixing optional modules with HZL-."
     into(pluginBundleDir)
 
     val velocityProject = project(":velocity")
-    dependsOn(velocityProject.tasks.named("shadowJar"))
-    from(velocityProject.tasks.named("shadowJar", Jar::class).flatMap { it.archiveFile })
+    dependsOn(velocityProject.tasks.named("jar"))
+    from(velocityProject.tasks.named("jar", Jar::class).flatMap { it.archiveFile })
 
     subprojects
         .filter { it.path != ":api" && it.path != ":velocity" }
