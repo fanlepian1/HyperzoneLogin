@@ -27,6 +27,11 @@ velocity / 主插件 (HyperZoneLogin 核心)
 - 事件与表管理：
   - 主插件负责触发表结构事件（`TableSchemaEvent`）以便子模块统一创建/删除表结构；
   - 子模块可以监听并响应这些事件进行表的创建或清理。
+- 运行库加载：
+  - 主插件会在 `onEnable` 最开始动态下载并注入 Configurate、Exposed、JDBC 驱动与连接池等运行库；
+  - 运行库缓存目录为 `plugins/hyperzonelogin/libs/`；
+  - `auth-offline`、`auth-yggd`、`profile-skin`、`data-merge` 也会在注册自身子模块前按需加载各自运行库，并复用该缓存目录；
+  - 该机制参考并改编自 LuckPerms，详细署名见仓库根目录的 `THIRD_PARTY_NOTICES.md`。
 
 - 无 `limboapi` 时的认证等待区：
   - 可在 `backend-server.conf` 中配置 `fallbackAuthServer` 为一个真实后端服务器名；

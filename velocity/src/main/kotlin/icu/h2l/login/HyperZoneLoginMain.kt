@@ -30,6 +30,9 @@ import icu.h2l.api.HyperZoneApi
 import icu.h2l.api.HyperZoneApiProvider
 import icu.h2l.api.command.HyperChatCommandManager
 import icu.h2l.api.command.HyperChatCommandRegistration
+import icu.h2l.api.dependency.HyperDependencyManager
+import icu.h2l.api.dependency.HyperRuntimeLibraries
+import icu.h2l.api.dependency.VelocityHyperDependencyClassPathAppender
 import icu.h2l.api.vServer.HyperZoneVServerAdapter
 import icu.h2l.api.module.HyperSubModule
 import icu.h2l.api.player.HyperZonePlayerAccessor
@@ -104,6 +107,7 @@ class HyperZoneLoginMain @Inject constructor(
     @Suppress("unused", "UNUSED_PARAMETER")
     @Subscribe
     fun onEnable(event: ProxyInitializeEvent) {
+        loadRuntimeLibraries()
         registerApiLogger()
         loadDatabaseConfig()
         loadRemapConfig()
@@ -194,6 +198,18 @@ class HyperZoneLoginMain @Inject constructor(
         logger.warn("========================================")
         logger.warn("=== ⚠ 内测版本，可能有 bug，请勿分发 ===")
         logger.warn("========================================")
+    }
+
+    private fun loadRuntimeLibraries() {
+        try {
+            HyperDependencyManager(
+                dataDirectory.resolve("libs"),
+                VelocityHyperDependencyClassPathAppender(server, this)
+            ).loadDependencies(HyperRuntimeLibraries.SHARED)
+            logger.info("核心运行库已完成动态加载")
+        } catch (e: Exception) {
+            throw IllegalStateException("无法加载 HyperZoneLogin 核心运行库", e)
+        }
     }
 
 

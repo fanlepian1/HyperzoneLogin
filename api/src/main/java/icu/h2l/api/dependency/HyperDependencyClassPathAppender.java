@@ -19,33 +19,15 @@
  *
  */
 
-plugins {
-    alias(libs.plugins.kotlin)
-}
+package icu.h2l.api.dependency;
 
-dependencies {
-    // Build as a standalone Velocity plugin; reference API at compile time only
-    compileOnly(project(":api"))
-    // The auth modules are separate plugins; keep compileOnly if you reference them
-    compileOnly(project(":auth-yggd"))
-    compileOnly(project(":auth-offline"))
+import java.nio.file.Path;
 
-    compileOnly(libs.velocityApi)
-
-    compileOnly(libs.h2)
-
-    compileOnly(libs.exposedCore)
-    compileOnly(libs.exposedJdbc)
-
-    compileOnly(libs.configurateHocon)
-    compileOnly(libs.configurateExtraKotlin)
-
-    testImplementation(platform(libs.junitBom))
-    testImplementation(libs.junitJupiter)
-    testRuntimeOnly(libs.junitPlatformLauncher)
-}
-
-tasks.test {
-    useJUnitPlatform()
+/**
+ * Adapted from LuckPerms' classpath appender abstraction.
+ */
+@FunctionalInterface
+public interface HyperDependencyClassPathAppender {
+    void addJarToClasspath(Path file);
 }
 

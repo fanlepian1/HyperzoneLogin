@@ -19,33 +19,28 @@
  *
  */
 
-plugins {
-    alias(libs.plugins.kotlin)
-}
+package icu.h2l.api.dependency;
 
-dependencies {
-    // Build as a standalone Velocity plugin; reference API at compile time only
-    compileOnly(project(":api"))
-    // The auth modules are separate plugins; keep compileOnly if you reference them
-    compileOnly(project(":auth-yggd"))
-    compileOnly(project(":auth-offline"))
+import com.velocitypowered.api.proxy.ProxyServer;
 
-    compileOnly(libs.velocityApi)
+import java.nio.file.Path;
+import java.util.Objects;
 
-    compileOnly(libs.h2)
+/**
+ * Adapted from LuckPerms' Velocity classpath appender.
+ */
+public final class VelocityHyperDependencyClassPathAppender implements HyperDependencyClassPathAppender {
+    private final ProxyServer proxy;
+    private final Object plugin;
 
-    compileOnly(libs.exposedCore)
-    compileOnly(libs.exposedJdbc)
+    public VelocityHyperDependencyClassPathAppender(ProxyServer proxy, Object plugin) {
+        this.proxy = Objects.requireNonNull(proxy, "proxy");
+        this.plugin = Objects.requireNonNull(plugin, "plugin");
+    }
 
-    compileOnly(libs.configurateHocon)
-    compileOnly(libs.configurateExtraKotlin)
-
-    testImplementation(platform(libs.junitBom))
-    testImplementation(libs.junitJupiter)
-    testRuntimeOnly(libs.junitPlatformLauncher)
-}
-
-tasks.test {
-    useJUnitPlatform()
+    @Override
+    public void addJarToClasspath(Path file) {
+        this.proxy.getPluginManager().addToClasspath(this.plugin, file);
+    }
 }
 

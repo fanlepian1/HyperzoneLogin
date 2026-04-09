@@ -29,7 +29,9 @@ import com.velocitypowered.api.proxy.ProxyServer
 import icu.h2l.api.HyperZoneApiProvider
 
 @Plugin(id = "hzl-auth-offline", name = "HyperZoneLogin - Auth Offline")
-class AuthOfflinePlugin @Inject constructor(private val server: ProxyServer) {
+class AuthOfflinePlugin @Inject constructor(
+    private val server: ProxyServer
+) {
     private val logger = java.util.logging.Logger.getLogger("hzl-auth-offline")
     @Subscribe
     fun onEnable(@Suppress("UNUSED_PARAMETER") e: ProxyInitializeEvent) {

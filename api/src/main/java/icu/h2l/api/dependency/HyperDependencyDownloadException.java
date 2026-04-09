@@ -19,33 +19,22 @@
  *
  */
 
-plugins {
-    alias(libs.plugins.kotlin)
-}
+package icu.h2l.api.dependency;
 
-dependencies {
-    // Build as a standalone Velocity plugin; reference API at compile time only
-    compileOnly(project(":api"))
-    // The auth modules are separate plugins; keep compileOnly if you reference them
-    compileOnly(project(":auth-yggd"))
-    compileOnly(project(":auth-offline"))
+/**
+ * Adapted from LuckPerms' dependency download exception.
+ */
+public final class HyperDependencyDownloadException extends Exception {
+    public HyperDependencyDownloadException(String message) {
+        super(message);
+    }
 
-    compileOnly(libs.velocityApi)
+    public HyperDependencyDownloadException(Throwable cause) {
+        super(cause);
+    }
 
-    compileOnly(libs.h2)
-
-    compileOnly(libs.exposedCore)
-    compileOnly(libs.exposedJdbc)
-
-    compileOnly(libs.configurateHocon)
-    compileOnly(libs.configurateExtraKotlin)
-
-    testImplementation(platform(libs.junitBom))
-    testImplementation(libs.junitJupiter)
-    testRuntimeOnly(libs.junitPlatformLauncher)
-}
-
-tasks.test {
-    useJUnitPlatform()
+    public HyperDependencyDownloadException(String message, Throwable cause) {
+        super(message, cause);
+    }
 }
 

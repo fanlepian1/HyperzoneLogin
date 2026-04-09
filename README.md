@@ -35,6 +35,15 @@
 - `profile-skin`：皮肤修复模块，用于补全与缓存皮肤属性；
 - `api`：提供给开发者和扩展模块使用的 API。
 
+## 运行时动态依赖加载
+
+从当前版本开始，`velocity` 主插件与部分子模块会在首次启动时动态下载所需运行库，并缓存到 `plugins/hyperzonelogin/libs/`（子模块会复用该缓存目录）。这样可以显著减小发布包体积。
+
+- 首次启动需要能够访问 Maven 仓库镜像；
+- 下载后的 jar 会进行 SHA-256 校验；
+- 后续启动会优先复用本地缓存；
+- 相关实现参考并改编自 LuckPerms，详见 [`THIRD_PARTY_NOTICES.md`](./THIRD_PARTY_NOTICES.md)。
+
 ## 当前已确认范围
 
 ### 可导入数据的插件

@@ -39,23 +39,21 @@ dependencies {
     implementation(project(":api"))
 //    implementation(project(":vcinjector"))
 
-// Exposed ORM
-    implementation(libs.exposedCore)
-    implementation(libs.exposedDao)
-    implementation(libs.exposedJdbc)
-    implementation(libs.exposedJavaTime)
-// Database drivers
-    implementation(libs.sqliteJdbc)
-    implementation(libs.mysql)
-    implementation(libs.mariadb)
-    implementation(libs.hikari)
+// Exposed ORM / runtime-loaded libraries
+    compileOnly(libs.exposedCore)
+    compileOnly(libs.exposedJdbc)
+// Database drivers / runtime-loaded libraries
+    compileOnly(libs.sqliteJdbc)
+    compileOnly(libs.mysql)
+    compileOnly(libs.mariadb)
+    compileOnly(libs.hikari)
 //    VC
     compileOnly(libs.velocityApi)
     compileOnly(libs.velocityProxy) // From Elytrium Repo.
 //    limbo
     compileOnly(libs.limboApi)
 
-    implementation(libs.configurateExtraKotlin)
+    compileOnly(libs.configurateExtraKotlin)
     compileOnly(libs.configurateHocon)
     compileOnly(libs.nettyAll)
     compileOnly(libs.gson)
@@ -83,18 +81,6 @@ tasks {
             exclude(dependency(moduleId(libs.kotlinReflect)))
 
             exclude(dependency(moduleId(libs.jetbrainsAnnotations)))
-//            extra-kotlin
-            include(dependency(moduleId(libs.configurateExtraKotlin)))
-//            Exposed ORM
-            include(dependency(moduleId(libs.exposedCore)))
-            include(dependency(moduleId(libs.exposedDao)))
-            include(dependency(moduleId(libs.exposedJdbc)))
-            include(dependency(moduleId(libs.exposedJavaTime)))
-//            Database drivers
-            include(dependency(moduleId(libs.sqliteJdbc)))
-            include(dependency(moduleId(libs.mysql)))
-            include(dependency(moduleId(libs.mariadb)))
-            include(dependency(moduleId(libs.hikari)))
 //           api
             include(dependency(":api"))
 //            模块 are now separate Velocity plugins and should not be bundled here
