@@ -19,20 +19,41 @@
  *
  */
 
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import icu.h2l.gradle.needPackageCompileOnly
 import org.gradle.api.file.DuplicatesStrategy
+import org.gradle.api.tasks.Delete
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.jvm.tasks.Jar
 
 plugins {
     alias(libs.plugins.kotlin)
+    alias(libs.plugins.shadow)
     id("icu.h2l.runtime-dependencies")
+}
+
+val bstatsRelocatedClasspath by configurations.creating {
+    isCanBeConsumed = false
+    isCanBeResolved = true
+}
+
+val relocateBstatsCompileOnlyJar by tasks.registering(ShadowJar::class) {
+    archiveBaseName.set("bstats-relocated-compileonly")
+    archiveClassifier.set("")
+    archiveVersion.set("")
+    destinationDirectory.set(layout.projectDirectory.dir(".gradle/hzl/compile-only"))
+    configurations = listOf(bstatsRelocatedClasspath)
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    relocate("org.bstats", "icu.h2l.login.libs.bstats")
+
+    exclude("META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA", "META-INF/INDEX.LIST", "module-info.class")
 }
 
 dependencies {
     // Modules (auth-offline, auth-yggd, data-merge) are now separate Velocity plugins
     // and will register themselves with the main plugin at runtime. Do not include
-    // them as project dependencies here so they are not bundled into the main shadow jar.
+    // them as project dependencies here so they are not bundled into the main plugin jar.
     implementation(project(":api"))
 //    implementation(project(":vcinjector"))
 
@@ -49,6 +70,10 @@ dependencies {
     compileOnly(libs.velocityProxy) // From Elytrium Repo.
 //    limbo
     compileOnly(libs.limboApi)
+    add(bstatsRelocatedClasspath.name, libs.bstatsVelocity)
+    compileOnly(files(relocateBstatsCompileOnlyJar.flatMap { it.archiveFile }))
+    needPackageCompileOnly(libs.bstatsVelocity)
+    needPackageCompileOnly(libs.jarRelocator)
 
     needPackageCompileOnly(libs.configurateExtraKotlin)
     needPackageCompileOnly(libs.configurateHocon)
@@ -69,6 +94,14 @@ dependencies {
 }
 
 tasks {
+    named("compileJava") {
+        dependsOn(relocateBstatsCompileOnlyJar)
+    }
+
+    named("compileKotlin") {
+        dependsOn(relocateBstatsCompileOnlyJar)
+    }
+
     named<Jar>("jar") {
         archiveBaseName.set("HyperZoneLogin")
         archiveClassifier.set("")
@@ -78,5 +111,13 @@ tasks {
         val apiSourceSets = apiProject.extensions.getByType(SourceSetContainer::class.java)
         dependsOn(apiProject.tasks.named("classes"))
         from(apiSourceSets.named("main").get().output)
+    }
+
+    named<ShadowJar>("shadowJar") {
+        enabled = false
+    }
+
+    named("assemble") {
+        dependsOn(named("jar"))
     }
 }

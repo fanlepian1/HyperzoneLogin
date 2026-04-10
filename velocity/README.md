@@ -30,7 +30,8 @@ velocity / 主插件 (HyperZoneLogin 核心)
 - 运行库加载：
   - 主插件入口已切换为 Java bootstrap，以便在没有 `MCKotlin-Velocity` 的情况下先下载 Kotlin 运行时；
   - 主插件产物现为普通 `jar`，仅额外并入 `api` 模块输出；第三方运行库不再随主插件一起打包；
-  - 主插件会在 `onEnable` 最开始动态下载并注入 Configurate、Exposed、JDBC 驱动与连接池等运行库；
+  - 主插件会在 `onEnable` 前动态下载并注入 Configurate、Exposed、JDBC 驱动、连接池等运行库；
+  - 对需要隔离包名的运行库，会先按原始 Maven 坐标下载到本地缓存，再在注入类路径前重写为 relocated jar；当前主用例是 `bStats`，用于避免与其他插件的 `org.bstats` 包冲突；
   - 同时也会下载 `mckotlin-velocity` 原先提供的 Kotlin StdLib / Kotlin Reflect / KotlinX Coroutines；
   - 运行库缓存目录为 `plugins/hyperzonelogin/libs/`；
   - `auth-offline`、`auth-yggd`、`profile-skin`、`data-merge` 也会在注册自身子模块前按需加载各自运行库，并复用该缓存目录；
@@ -39,7 +40,7 @@ velocity / 主插件 (HyperZoneLogin 核心)
 - 无 `limboapi` 时的认证等待区：
   - 可在 `backend-server.conf` 中配置 `fallbackAuthServer` 为一个真实后端服务器名；
   - 当未安装 `limboapi` 时，未认证玩家会被固定送入该服务器等待认证；
-  - 可通过 `postAuthDefaultServer` 配置认证完成后��先进入的子服务器，默认 `play`；
+  - 可通过 `postAuthDefaultServer` 配置认证完成后优先进入的子服务器，默认 `play`；
   - 认证完成前，玩家不能进入其他后端；
   - 若 `rememberRequestedServerDuringAuth=true`，则会记住玩家原本想去的服务器，并在认证成功后自动连接过去。
 

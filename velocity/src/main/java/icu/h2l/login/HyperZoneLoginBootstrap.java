@@ -24,6 +24,7 @@ package icu.h2l.login;
 import com.google.inject.Inject;
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
+import com.velocitypowered.api.event.proxy.ProxyShutdownEvent;
 import com.velocitypowered.api.plugin.annotation.DataDirectory;
 import com.velocitypowered.api.proxy.ProxyServer;
 import icu.h2l.api.HyperZoneApi;
@@ -39,25 +40,42 @@ import icu.h2l.api.dependency.VelocityHyperDependencyClassPathAppender;
 import icu.h2l.api.module.HyperSubModule;
 import icu.h2l.api.player.HyperZonePlayerAccessor;
 import icu.h2l.api.vServer.HyperZoneVServerAdapter;
+import icu.h2l.login.dependency.RelocatingDependencyPathProcessor;
+import icu.h2l.login.metrics.BStatsMetricsBootstrap;
+import icu.h2l.login.metrics.BStatsMetricsHandle;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import net.kyori.adventure.text.logger.slf4j.ComponentLogger;
+import org.slf4j.Logger;
 
 public final class HyperZoneLoginBootstrap implements HyperZoneApi {
+    private static final int BSTATS_PLUGIN_ID = 30691;
+    private static final String BSTATS_GROUP = "org.bstats";
+    private static final Map<String, String> BSTATS_RELOCATIONS = Map.of(
+        BSTATS_GROUP,
+        "icu.h2l.login.libs.bstats"
+    );
+
     private final ProxyServer proxy;
     private final ComponentLogger logger;
+    private final Logger slf4jLogger;
     private final Path dataDirectory;
     private final HyperZoneLoginMain runtime;
+    private BStatsMetricsHandle metrics;
 
     @Inject
     public HyperZoneLoginBootstrap(
         ProxyServer proxy,
         ComponentLogger logger,
+        Logger slf4jLogger,
         @DataDirectory Path dataDirectory
     ) {
         this.proxy = proxy;
         this.logger = logger;
+        this.slf4jLogger = slf4jLogger;
         this.dataDirectory = dataDirectory;
         loadRuntimeLibraries();
         this.runtime = new HyperZoneLoginMain(proxy, logger, dataDirectory, this);
@@ -67,6 +85,15 @@ public final class HyperZoneLoginBootstrap implements HyperZoneApi {
     @Subscribe
     public void onEnable(ProxyInitializeEvent event) {
         this.runtime.onEnable(event);
+        this.metrics = BStatsMetricsBootstrap.initialize(this, this.proxy, this.slf4jLogger, this.dataDirectory, BSTATS_PLUGIN_ID);
+    }
+
+    @Subscribe
+    public void onDisable(ProxyShutdownEvent event) {
+        if (this.metrics != null) {
+            this.metrics.shutdown();
+            this.metrics = null;
+        }
     }
 
     @Override
@@ -130,7 +157,10 @@ public final class HyperZoneLoginBootstrap implements HyperZoneApi {
                     public void onDownloadFailure(icu.h2l.api.dependency.HyperDependency dependency, HyperDependencyRepository repository, Exception exception) {
                         logger.warn("运行库下载失败: {} <- {} ({})", dependency.id(), repository.getBaseUrl(), exception.getMessage());
                     }
-                }
+                },
+                new RelocatingDependencyPathProcessor(
+                    RelocatingDependencyPathProcessor.Rule.forGroup(BSTATS_GROUP, BSTATS_RELOCATIONS)
+                )
             ).loadDependencies(dependencies);
             this.logger.info("核心运行库已完成动态加载");
         } catch (Exception e) {
@@ -143,7 +173,22 @@ public final class HyperZoneLoginBootstrap implements HyperZoneApi {
         if (dependencies.isEmpty()) {
             throw new IllegalStateException("插件 jar 内未找到构建生成的运行库清单: " + HyperDependencyManifest.RESOURCE_PATH);
         }
-        return dependencies;
+        return dependencies.stream()
+            .sorted(Comparator.comparingInt(HyperZoneLoginBootstrap::runtimeDependencyPriority))
+            .toList();
+    }
+
+    private static int runtimeDependencyPriority(HyperDependency dependency) {
+        String groupId = dependency.getGroupId();
+        String artifactId = dependency.getArtifactId();
+        if (("org.ow2.asm".equals(groupId) && ("asm".equals(artifactId) || "asm-commons".equals(artifactId)))
+            || ("me.lucko".equals(groupId) && "jar-relocator".equals(artifactId))) {
+            return 0;
+        }
+        return switch (groupId) {
+            case BSTATS_GROUP -> 1;
+            default -> 2;
+        };
     }
 }
 

@@ -38,10 +38,11 @@ public final class HyperDependencyManager {
     private final HyperDependencyClassPathAppender classPathAppender;
     private final Collection<HyperDependencyRepository> repositories;
     private final HyperDependencyProgressListener progressListener;
+    private final HyperDependencyPathProcessor pathProcessor;
     private final Map<HyperDependency, Path> loaded = new LinkedHashMap<>();
 
     public HyperDependencyManager(Path cacheDirectory, HyperDependencyClassPathAppender classPathAppender) {
-        this(cacheDirectory, classPathAppender, HyperDependencyRepository.DEFAULT_REPOSITORIES, HyperDependencyProgressListener.NONE);
+        this(cacheDirectory, classPathAppender, HyperDependencyRepository.DEFAULT_REPOSITORIES, HyperDependencyProgressListener.NONE, HyperDependencyPathProcessor.NONE);
     }
 
     public HyperDependencyManager(
@@ -49,7 +50,7 @@ public final class HyperDependencyManager {
         HyperDependencyClassPathAppender classPathAppender,
         Collection<HyperDependencyRepository> repositories
     ) {
-        this(cacheDirectory, classPathAppender, repositories, HyperDependencyProgressListener.NONE);
+        this(cacheDirectory, classPathAppender, repositories, HyperDependencyProgressListener.NONE, HyperDependencyPathProcessor.NONE);
     }
 
     public HyperDependencyManager(
@@ -58,10 +59,21 @@ public final class HyperDependencyManager {
         Collection<HyperDependencyRepository> repositories,
         HyperDependencyProgressListener progressListener
     ) {
+        this(cacheDirectory, classPathAppender, repositories, progressListener, HyperDependencyPathProcessor.NONE);
+    }
+
+    public HyperDependencyManager(
+        Path cacheDirectory,
+        HyperDependencyClassPathAppender classPathAppender,
+        Collection<HyperDependencyRepository> repositories,
+        HyperDependencyProgressListener progressListener,
+        HyperDependencyPathProcessor pathProcessor
+    ) {
         this.cacheDirectory = Objects.requireNonNull(cacheDirectory, "cacheDirectory");
         this.classPathAppender = Objects.requireNonNull(classPathAppender, "classPathAppender");
         this.repositories = Objects.requireNonNull(repositories, "repositories");
         this.progressListener = Objects.requireNonNull(progressListener, "progressListener");
+        this.pathProcessor = Objects.requireNonNull(pathProcessor, "pathProcessor");
     }
 
     public synchronized void loadDependencies(Collection<HyperDependency> dependencies) throws HyperDependencyDownloadException {
@@ -77,9 +89,10 @@ public final class HyperDependencyManager {
         }
 
         Path file = downloadDependency(dependency);
-        this.classPathAppender.addJarToClasspath(file);
-        this.loaded.put(dependency, file);
-        this.progressListener.onDependencyLoaded(dependency, file);
+        Path processedFile = this.pathProcessor.process(dependency, file);
+        this.classPathAppender.addJarToClasspath(processedFile);
+        this.loaded.put(dependency, processedFile);
+        this.progressListener.onDependencyLoaded(dependency, processedFile);
     }
 
     private Path downloadDependency(HyperDependency dependency) throws HyperDependencyDownloadException {

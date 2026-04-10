@@ -21,6 +21,8 @@ log4j = "2.14.1"
 guice = "4.2.3"
 guava = "33.4.0-jre"
 limboApi = "1.1.26"
+bstats = "3.2.1"
+jarRelocator = "1.7"
 junitBom = "5.10.0"
 jetbrainsAnnotations = "26.0.2"
 
@@ -49,6 +51,8 @@ kotlinReflect = { module = "org.jetbrains.kotlin:kotlin-reflect" }
 jetbrainsAnnotations = { group = "org.jetbrains", name = "annotations", version.ref = "jetbrainsAnnotations" }
 
 limboApi = { group = "net.elytrium.limboapi", name = "api", version.ref = "limboApi" }
+bstatsVelocity = { group = "org.bstats", name = "bstats-velocity", version.ref = "bstats" }
+jarRelocator = { group = "me.lucko", name = "jar-relocator", version.ref = "jarRelocator" }
 
 configurateHocon = { group = "org.spongepowered", name = "configurate-hocon", version.ref = "configurate" }
 configurateExtraKotlin = { group = "org.spongepowered", name = "configurate-extra-kotlin", version.ref = "configurate" }
