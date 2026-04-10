@@ -23,7 +23,7 @@ velocity / 主插件 (HyperZoneLogin 核心)
 	- `reload`：重载配置/状态（输出 `Reloaded!`）。
 	- `re`：对玩家触发重新认证（仅玩家可执行，会调用 `triggerLimboAuthForPlayer`）。
 	- `uuid`：显示代理 Player 与 HyperZonePlayer 的信息（包括 profile、uuid 等）。
-  - 管理命令受限于权限 `hyperzonelogin.admin`（见 `hasPermission` 实现）。
+    - 管理命令通过 Brigadier 子命令节点上的权限检查进行限制：`reload` 与 `uuid` 需要 `hyperzonelogin.admin`，`re` 允许普通玩家使用。
 - 事件与表管理：
   - 主插件负责触发表结构事件（`TableSchemaEvent`）以便子模块统一创建/删除表结构；
   - 子模块可以监听并响应这些事件进行表的创建或清理。

@@ -153,8 +153,9 @@ class HyperZoneLoginMain(
         // External modules (auth-offline, auth-yggd, data-merge) will be loaded as
         // separate Velocity plugins and should call `registerModule(...)` on this
         // main plugin during their own initialization.
-        val hzlCommandMeta = proxy.commandManager.metaBuilder("hzl").build()
-        proxy.commandManager.register(hzlCommandMeta, HyperZoneLoginCommand())
+        val hzlCommand = HyperZoneLoginCommand().createCommand()
+        val hzlCommandMeta = proxy.commandManager.metaBuilder(hzlCommand).build()
+        proxy.commandManager.register(hzlCommandMeta, hzlCommand)
         proxy.eventManager.register(plugin, EventListener())
         proxy.eventManager.register(plugin, HyperZonePlayerManager)
         // If Limbo was present, we've already registered its event listener above
