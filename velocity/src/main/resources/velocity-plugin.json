@@ -1,7 +1,7 @@
 {
   "id":"hyperzonelogin",
   "name":"HyperZoneLogin",
-  "version":"0.0.1",
+  "version":"${pluginVersion}",
   "authors":["ksqeib"],
   "dependencies":[{"id":"limboapi","optional":true}],
   "main":"icu.h2l.login.HyperZoneLoginBootstrap"

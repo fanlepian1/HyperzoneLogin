@@ -1,7 +1,7 @@
 {
   "id": "hzl-auth-offline",
   "name": "HyperZoneLogin - Auth Offline",
-  "version": "1.0.0",
+  "version": "${pluginVersion}",
   "authors": ["ksqeib"],
   "dependencies": [{"id":"hyperzonelogin","optional":false}],
   "main": "icu.h2l.login.auth.offline.AuthOfflineBootstrap"

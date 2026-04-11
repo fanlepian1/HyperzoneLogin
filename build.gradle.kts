@@ -21,11 +21,20 @@
 
 import org.gradle.api.tasks.Sync
 import org.gradle.jvm.tasks.Jar
+import org.gradle.language.jvm.tasks.ProcessResources
+import java.io.File
+import java.time.YearMonth
 
 plugins {
     base
     alias(libs.plugins.spotless)
     alias(libs.plugins.kotlin) apply false
+}
+
+enum class ReleaseChannel(val suffix: String) {
+    STABLE(""),
+    RC("-RC"),
+    SNAPSHOT("-SNAPSHOT"),
 }
 
 fun toBlockCommentHeader(headerFile: File): String {
@@ -36,6 +45,109 @@ fun toBlockCommentHeader(headerFile: File): String {
 
     return "/*\n$body\n *\n */\n\n"
 }
+
+fun Project.requireStringProperty(name: String): String =
+    findProperty(name)?.toString()?.trim()?.takeIf { it.isNotEmpty() }
+        ?: error("Missing required Gradle property '$name'.")
+
+fun Project.gitDir(): File? {
+    val dotGit = rootDir.resolve(".git")
+    return when {
+        dotGit.isDirectory -> dotGit
+        dotGit.isFile -> {
+            val pointer = dotGit.readText().trim()
+            val prefix = "gitdir:"
+            if (!pointer.startsWith(prefix, ignoreCase = true)) {
+                null
+            } else {
+                rootDir.resolve(pointer.substring(prefix.length).trim()).normalize()
+            }
+        }
+
+        else -> null
+    }
+}
+
+fun readPackedRef(gitDir: File, refPath: String): String? {
+    val packedRefs = gitDir.resolve("packed-refs")
+    if (!packedRefs.isFile) {
+        return null
+    }
+
+    return packedRefs.useLines { lines ->
+        lines
+            .filter { line -> line.isNotBlank() && !line.startsWith("#") && !line.startsWith("^") }
+            .mapNotNull { line ->
+                val parts = line.trim().split(' ', limit = 2)
+                if (parts.size == 2 && parts[1] == refPath) parts[0] else null
+            }
+            .firstOrNull()
+    }
+}
+
+fun Project.resolveGitCommitId(): String? {
+    val override = findProperty("versionGitOverride")?.toString()?.trim()
+    if (!override.isNullOrBlank()) {
+        return override
+    }
+
+    val environmentValue = sequenceOf(
+        "HZL_GIT_ID",
+        "GITHUB_SHA",
+        "CI_COMMIT_SHA",
+        "BUILD_VCS_NUMBER",
+        "GIT_COMMIT",
+    ).mapNotNull { System.getenv(it)?.trim()?.takeIf(String::isNotBlank) }.firstOrNull()
+    if (environmentValue != null) {
+        return environmentValue
+    }
+
+    val gitDir = gitDir() ?: return null
+    val headFile = gitDir.resolve("HEAD")
+    if (!headFile.isFile) {
+        return null
+    }
+
+    val head = headFile.readText().trim()
+    return if (head.startsWith("ref:")) {
+        val refPath = head.removePrefix("ref:").trim()
+        val refFile = gitDir.resolve(refPath)
+        when {
+            refFile.isFile -> refFile.readText().trim()
+            else -> readPackedRef(gitDir, refPath)
+        }
+    } else {
+        head.takeIf { it.isNotBlank() }
+    }
+}
+
+fun normalizeGitIdentifier(raw: String?): String? = raw
+    ?.trim()
+    ?.removePrefix("refs/heads/")
+    ?.ifBlank { null }
+    ?.let { value -> if (value.length > 8) value.take(8) else value }
+
+val versionClock: YearMonth = YearMonth.now()
+val versionPatch = requireStringProperty("versionPatch").toIntOrNull()
+    ?.takeIf { it > 0 }
+    ?: error("Property 'versionPatch' must be a positive integer.")
+val releaseChannel = runCatching {
+    ReleaseChannel.valueOf(requireStringProperty("releaseChannel").uppercase())
+}.getOrElse {
+    error("Property 'releaseChannel' must be one of: ${ReleaseChannel.entries.joinToString()}.")
+}
+val baseVersion = "${versionClock.year % 100}.${versionClock.monthValue}.$versionPatch"
+val gitIdentifier = normalizeGitIdentifier(resolveGitCommitId())
+val computedVersion = buildString {
+    append(baseVersion)
+    append(releaseChannel.suffix)
+    if (gitIdentifier != null) {
+        append('-')
+        append(gitIdentifier)
+    }
+}
+
+version = computedVersion
 
 val kotlinLicenseHeader = toBlockCommentHeader(rootProject.file("HEADER.txt"))
 val kotlinSourceHeaderDelimiter = "^(package|@file:|import)"
@@ -83,6 +195,15 @@ subprojects {
         maven("https://repo.papermc.io/repository/maven-public/")
         maven("https://maven.fabricmc.net/")
         maven("https://maven.elytrium.net/repo/")
+    }
+
+    tasks.withType(ProcessResources::class.java).configureEach {
+        val pluginVersion = rootProject.version.toString()
+        inputs.property("pluginVersion", pluginVersion)
+        filteringCharset = "UTF-8"
+        filesMatching("velocity-plugin.json") {
+            expand("pluginVersion" to pluginVersion)
+        }
     }
 }
 
@@ -132,6 +253,17 @@ val buildAllDistributions by tasks.registering {
     description = "Builds both the all-in-one and split HyperZoneLogin distributions."
     dependsOn(collectPluginJars)
     dependsOn(collectSplitPluginJars)
+}
+
+val printVersionInfo by tasks.registering {
+    group = "help"
+    description = "Prints the resolved HyperZoneLogin version components."
+    doLast {
+        println("HyperZoneLogin version: $computedVersion")
+        println("  baseVersion    = $baseVersion")
+        println("  releaseChannel = ${releaseChannel.name}")
+        println("  gitIdentifier  = ${gitIdentifier ?: "<none>"}")
+    }
 }
 
 tasks.named("assemble") {

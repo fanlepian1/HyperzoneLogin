@@ -1,7 +1,7 @@
 {
   "id": "hzl-data-merge",
   "name": "HyperZoneLogin - Data Merge",
-  "version": "1.0.0",
+  "version": "${pluginVersion}",
   "authors": ["ksqeib"],
   "dependencies": [{"id":"hyperzonelogin","optional":false}],
   "main": "icu.h2l.login.merge.DataMergeBootstrap"
