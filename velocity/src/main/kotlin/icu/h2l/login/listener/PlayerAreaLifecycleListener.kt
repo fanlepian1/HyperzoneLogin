@@ -88,10 +88,6 @@ object PlayerAreaLifecycleListener {
 
     @Subscribe
     fun onWaitingAreaJoin(event: VServerJoinEvent) {
-        if (!event.hyperZonePlayer.isInWaitingArea()) {
-            return
-        }
-
         val channel = event.proxyPlayer.getChannel()
         when (sessionStates[channel]?.currentArea) {
             AreaState.WAITING -> {
