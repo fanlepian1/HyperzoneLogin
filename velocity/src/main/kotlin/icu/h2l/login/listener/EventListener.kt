@@ -34,6 +34,7 @@ import net.kyori.adventure.text.format.NamedTextColor
 
 class EventListener {
     companion object {
+        const val FLOODGATE_DEFAULT_PREFIX = "."
         const val EXPECTED_NAME_PREFIX = RemapUtils.EXPECTED_NAME_PREFIX
         const val REMAP_PREFIX = RemapUtils.REMAP_PREFIX
         private const val PLUGIN_CONFLICT_MESSAGE = "登录失败：检测到插件冲突。"
@@ -70,6 +71,13 @@ class EventListener {
         }
 
         if (!incomingName.startsWith(EXPECTED_NAME_PREFIX)) {
+            if(incomingName.startsWith(FLOODGATE_DEFAULT_PREFIX)) {
+                disconnectWithError(
+                    "GameProfile 名称校验失败：$incomingName (疑似 Floodgate 默认前缀)，疑似插件冲突",
+                    PLUGIN_CONFLICT_MESSAGE
+                )
+                return
+            }
             disconnectWithError(
                 "GameProfile 名称校验失败：$incomingName (期望前缀 $EXPECTED_NAME_PREFIX)，疑似插件冲突",
                 PLUGIN_CONFLICT_MESSAGE
