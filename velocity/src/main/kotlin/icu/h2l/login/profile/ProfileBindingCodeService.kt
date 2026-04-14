@@ -94,13 +94,6 @@ class ProfileBindingCodeService(
 
     fun use(player: HyperZonePlayer, rawCode: String): Result {
         val messages = messages()
-        if (!player.isVerified()) {
-            return Result(
-                false,
-                messages?.render(player, MessageKeys.BindCode.USE_VERIFY_FIRST)
-                    ?: Component.text("请先完成当前认证流程，再使用绑定码")
-            )
-        }
         if (player.hasAttachedProfile()) {
             return Result(
                 false,
