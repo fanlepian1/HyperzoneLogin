@@ -21,345 +21,53 @@
 
 package icu.h2l.login.auth.offline.command
 
-import com.mojang.brigadier.arguments.StringArgumentType
-import com.mojang.brigadier.builder.RequiredArgumentBuilder
-import com.velocitypowered.api.command.BrigadierCommand
-import com.velocitypowered.api.command.CommandSource
-import icu.h2l.api.command.HyperChatBrigadierContext
 import icu.h2l.api.command.HyperChatBrigadierRegistration
 
 object OfflineAuthBrigadierCommands {
     fun login(): HyperChatBrigadierRegistration {
-        return HyperChatBrigadierRegistration { context ->
-            context.literal()
-                .then(loginPassword(context))
-                .then(loginAs(context))
-        }
+        return greedyCommand("login")
     }
-
-    private fun loginPassword(context: HyperChatBrigadierContext) =
-        word("password")
-            .executes { commandContext ->
-                context.execute(
-                    commandContext.source,
-                    args = arrayOf(
-                        StringArgumentType.getString(commandContext, "password")
-                    )
-                )
-            }
-            .then(
-                word("code")
-                    .executes { commandContext ->
-                        context.execute(
-                            commandContext.source,
-                            args = arrayOf(
-                                StringArgumentType.getString(commandContext, "password"),
-                                StringArgumentType.getString(commandContext, "code")
-                            )
-                        )
-                    }
-            )
-
-    private fun loginAs(context: HyperChatBrigadierContext) =
-        BrigadierCommand.literalArgumentBuilder("as")
-            .then(
-                word("username")
-                    .then(
-                        word("password")
-                            .executes { commandContext ->
-                                context.execute(
-                                    commandContext.source,
-                                    args = arrayOf(
-                                        "as",
-                                        StringArgumentType.getString(commandContext, "username"),
-                                        StringArgumentType.getString(commandContext, "password")
-                                    )
-                                )
-                            }
-                            .then(
-                                word("code")
-                                    .executes { commandContext ->
-                                        context.execute(
-                                            commandContext.source,
-                                            args = arrayOf(
-                                                "as",
-                                                StringArgumentType.getString(commandContext, "username"),
-                                                StringArgumentType.getString(commandContext, "password"),
-                                                StringArgumentType.getString(commandContext, "code")
-                                            )
-                                        )
-                                    }
-                            )
-                    )
-            )
 
     fun register(): HyperChatBrigadierRegistration {
-        return doublePasswordCommand("register", "password", "confirmPassword")
+        return greedyCommand("register")
     }
 
-
     fun changePassword(): HyperChatBrigadierRegistration {
-        return HyperChatBrigadierRegistration { context ->
-            context.literal()
-                .then(
-                    word("oldPassword")
-                        .then(
-                            word("newPassword")
-                                .executes { commandContext ->
-                                    context.execute(
-                                        commandContext.source,
-                                        args = arrayOf(
-                                            StringArgumentType.getString(commandContext, "oldPassword"),
-                                            StringArgumentType.getString(commandContext, "newPassword")
-                                        )
-                                    )
-                                }
-                        )
-                )
-        }
+        return greedyCommand("changepassword")
     }
 
     fun logout(): HyperChatBrigadierRegistration {
-        return HyperChatBrigadierRegistration { context ->
-            context.literal()
-                .executes { commandContext ->
-                    context.execute(commandContext.source)
-                }
-        }
+        return plainCommand("logout")
     }
 
     fun unregister(): HyperChatBrigadierRegistration {
-        return HyperChatBrigadierRegistration { context ->
-            context.literal()
-                .then(
-                    word("password")
-                        .executes { commandContext ->
-                            context.execute(
-                                commandContext.source,
-                                args = arrayOf(
-                                    StringArgumentType.getString(commandContext, "password")
-                                )
-                            )
-                        }
-                )
-        }
+        return greedyCommand("unregister")
     }
 
     fun email(): HyperChatBrigadierRegistration {
-        return HyperChatBrigadierRegistration { context ->
-            context.literal()
-                .executes { commandContext ->
-                    context.execute(commandContext.source)
-                }
-                .then(emailAdd(context))
-                .then(emailChange(context))
-                .then(emailShow(context))
-                .then(emailRecovery(context))
-                .then(emailCode(context))
-                .then(emailSetPassword(context))
-        }
+        return greedyCommand("email")
     }
 
     fun totp(): HyperChatBrigadierRegistration {
+        return greedyCommand("totp")
+    }
+
+    private fun greedyCommand(name: String): HyperChatBrigadierRegistration {
         return HyperChatBrigadierRegistration { context ->
-            context.literal()
+            context.literal(name)
                 .executes { commandContext ->
                     context.execute(commandContext.source)
                 }
-                .then(totpAdd(context, "add"))
-                .then(totpAdd(context, "enable"))
-                .then(totpConfirm(context))
-                .then(totpRemove(context, "remove"))
-                .then(totpRemove(context, "disable"))
+                .then(context.greedyArguments())
         }
     }
 
-    private fun emailAdd(context: HyperChatBrigadierContext) =
-        BrigadierCommand.literalArgumentBuilder("add")
-            .then(
-                word("currentPassword")
-                    .then(
-                        word("email")
-                            .then(
-                                word("confirmEmail")
-                                    .executes { commandContext ->
-                                        context.execute(
-                                            commandContext.source,
-                                            args = arrayOf(
-                                                "add",
-                                                StringArgumentType.getString(commandContext, "currentPassword"),
-                                                StringArgumentType.getString(commandContext, "email"),
-                                                StringArgumentType.getString(commandContext, "confirmEmail")
-                                            )
-                                        )
-                                    }
-                            )
-                    )
-            )
-
-    private fun emailChange(context: HyperChatBrigadierContext) =
-        BrigadierCommand.literalArgumentBuilder("change")
-            .then(
-                word("currentPassword")
-                    .then(
-                        word("oldEmail")
-                            .then(
-                                word("newEmail")
-                                    .executes { commandContext ->
-                                        context.execute(
-                                            commandContext.source,
-                                            args = arrayOf(
-                                                "change",
-                                                StringArgumentType.getString(commandContext, "currentPassword"),
-                                                StringArgumentType.getString(commandContext, "oldEmail"),
-                                                StringArgumentType.getString(commandContext, "newEmail")
-                                            )
-                                        )
-                                    }
-                            )
-                    )
-            )
-
-    private fun emailShow(context: HyperChatBrigadierContext) =
-        BrigadierCommand.literalArgumentBuilder("show")
-            .then(
-                word("currentPassword")
-                    .executes { commandContext ->
-                        context.execute(
-                            commandContext.source,
-                            args = arrayOf(
-                                "show",
-                                StringArgumentType.getString(commandContext, "currentPassword")
-                            )
-                        )
-                    }
-            )
-
-    private fun emailRecovery(context: HyperChatBrigadierContext) =
-        BrigadierCommand.literalArgumentBuilder("recovery")
-            .then(
-                word("email")
-                    .executes { commandContext ->
-                        context.execute(
-                            commandContext.source,
-                            args = arrayOf(
-                                "recovery",
-                                StringArgumentType.getString(commandContext, "email")
-                            )
-                        )
-                    }
-            )
-
-    private fun emailCode(context: HyperChatBrigadierContext) =
-        BrigadierCommand.literalArgumentBuilder("code")
-            .then(
-                word("verificationCode")
-                    .executes { commandContext ->
-                        context.execute(
-                            commandContext.source,
-                            args = arrayOf(
-                                "code",
-                                StringArgumentType.getString(commandContext, "verificationCode")
-                            )
-                        )
-                    }
-            )
-
-    private fun emailSetPassword(context: HyperChatBrigadierContext) =
-        BrigadierCommand.literalArgumentBuilder("setpassword")
-            .then(
-                word("newPassword")
-                    .then(
-                        word("confirmPassword")
-                            .executes { commandContext ->
-                                context.execute(
-                                    commandContext.source,
-                                    args = arrayOf(
-                                        "setpassword",
-                                        StringArgumentType.getString(commandContext, "newPassword"),
-                                        StringArgumentType.getString(commandContext, "confirmPassword")
-                                    )
-                                )
-                            }
-                    )
-            )
-
-    private fun totpAdd(context: HyperChatBrigadierContext, literal: String) =
-        BrigadierCommand.literalArgumentBuilder(literal)
-            .then(
-                word("password")
-                    .executes { commandContext ->
-                        context.execute(
-                            commandContext.source,
-                            args = arrayOf(
-                                literal,
-                                StringArgumentType.getString(commandContext, "password")
-                            )
-                        )
-                    }
-            )
-
-    private fun totpConfirm(context: HyperChatBrigadierContext) =
-        BrigadierCommand.literalArgumentBuilder("confirm")
-            .then(
-                word("code")
-                    .executes { commandContext ->
-                        context.execute(
-                            commandContext.source,
-                            args = arrayOf(
-                                "confirm",
-                                StringArgumentType.getString(commandContext, "code")
-                            )
-                        )
-                    }
-            )
-
-    private fun totpRemove(context: HyperChatBrigadierContext, literal: String) =
-        BrigadierCommand.literalArgumentBuilder(literal)
-            .then(
-                word("password")
-                    .then(
-                        word("code")
-                            .executes { commandContext ->
-                                context.execute(
-                                    commandContext.source,
-                                    args = arrayOf(
-                                        literal,
-                                        StringArgumentType.getString(commandContext, "password"),
-                                        StringArgumentType.getString(commandContext, "code")
-                                    )
-                                )
-                            }
-                    )
-            )
-
-    private fun doublePasswordCommand(
-        name: String,
-        firstArgumentName: String,
-        secondArgumentName: String
-    ): HyperChatBrigadierRegistration {
+    private fun plainCommand(name: String): HyperChatBrigadierRegistration {
         return HyperChatBrigadierRegistration { context ->
             context.literal(name)
-                .then(
-                    word(firstArgumentName)
-                        .then(
-                            word(secondArgumentName)
-                                .executes { commandContext ->
-                                    context.execute(
-                                        commandContext.source,
-                                        args = arrayOf(
-                                            StringArgumentType.getString(commandContext, firstArgumentName),
-                                            StringArgumentType.getString(commandContext, secondArgumentName)
-                                        )
-                                    )
-                                }
-                        )
-                )
+                .executes { commandContext ->
+                    context.execute(commandContext.source)
+                }
         }
     }
-
-    private fun word(name: String): RequiredArgumentBuilder<CommandSource, String> {
-        return BrigadierCommand.requiredArgumentBuilder(name, StringArgumentType.word())
-    }
 }
-
