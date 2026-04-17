@@ -30,6 +30,7 @@ import icu.h2l.login.inject.network.netty.NettyLoginSessionHandler
 import icu.h2l.login.inject.network.netty.SeverChannelAcceptAdapter
 import icu.h2l.login.inject.network.netty.replacer.ServerLoginSuccessPacketReplacer
 import icu.h2l.login.inject.network.netty.replacer.ToBackendPacketReplacer
+import icu.h2l.login.inject.network.netty.replacer.WaitingAreaUpsertPlayerInfoPacketReplacer
 import icu.h2l.login.inject.network.netty.ViaChannelInitializer
 import io.netty.channel.Channel
 import java.net.InetSocketAddress
@@ -93,6 +94,7 @@ class VelocityNetworkInjectorImpl(
             initializer.set(object : ViaChannelInitializer(old) {
                 override fun injectChannel(channel: Channel) {
                     channel.pipeline().addLast("sl_r_rpl", ToBackendPacketReplacer(channel))
+                    channel.pipeline().addLast("h2l_waiting_upsert_filter", WaitingAreaUpsertPlayerInfoPacketReplacer())
 //                    println("SVA: ${channel.pipeline().names()}")
                 }
             })
