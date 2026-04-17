@@ -190,6 +190,10 @@ class OutPreVServerAuth(
         state.inAuthHold = false
 
         if (state.initialFlowPending) {
+            if (!state.hasConnectedToAuthServerOnce) {
+                state.verifiedExitPending = true
+                return
+            }
             val handler = pendingInitialHandlers[player.getChannel()]
             if (handler == null) {
                 state.verifiedExitPending = true

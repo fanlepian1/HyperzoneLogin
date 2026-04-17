@@ -40,4 +40,57 @@ class OutPreBackendBridgeSessionHandlerTest {
         assertFalse(shouldDropOutPreBackendPacket(mockk<AvailableCommandsPacket>(relaxed = true)))
         assertFalse(shouldDropOutPreBackendPacket(mockk<MinecraftPacket>(relaxed = true)))
     }
+
+    @Test
+    fun `fast pass release consumes finished update even before backend config completes`() {
+        assertTrue(
+            shouldConsumeFinishedUpdateForVelocityRelease(
+                releaseInProgress = true,
+                configMode = true,
+                bridgeConnected = false,
+            )
+        )
+    }
+
+    @Test
+    fun `bridge config ack is preserved while release is not armed`() {
+        assertFalse(
+            shouldConsumeFinishedUpdateForVelocityRelease(
+                releaseInProgress = false,
+                configMode = true,
+                bridgeConnected = true,
+            )
+        )
+    }
+
+    @Test
+    fun `post config release still consumes finished update normally`() {
+        assertTrue(
+            shouldConsumeFinishedUpdateForVelocityRelease(
+                releaseInProgress = true,
+                configMode = false,
+                bridgeConnected = false,
+            )
+        )
+    }
+
+    @Test
+    fun `fast pass release switches directly into velocity config when bridge is absent`() {
+        assertTrue(
+            shouldReleaseDirectlyToVelocityConfig(
+                configMode = true,
+                bridgeConnected = false,
+            )
+        )
+    }
+
+    @Test
+    fun `waiting area play release does not use direct config handoff`() {
+        assertFalse(
+            shouldReleaseDirectlyToVelocityConfig(
+                configMode = false,
+                bridgeConnected = false,
+            )
+        )
+    }
 }

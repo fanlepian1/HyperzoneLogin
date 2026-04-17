@@ -50,6 +50,7 @@ import com.velocitypowered.proxy.protocol.packet.config.FinishedUpdatePacket
 import com.velocitypowered.proxy.protocol.packet.config.KnownPacksPacket
 import com.velocitypowered.proxy.protocol.packet.config.StartUpdatePacket
 import icu.h2l.login.inject.network.NettyReflectionHelper
+import icu.h2l.login.inject.network.NettyReflectionHelper.reflectedTeardown
 import icu.h2l.login.manager.HyperChatCommandManagerImpl
 import io.netty.buffer.ByteBuf
 import io.netty.buffer.Unpooled
@@ -214,9 +215,24 @@ class OutPreClientBridgeSessionHandler(
                 return@execute
             }
 
+            if (shouldReleaseDirectlyToVelocityConfig(
+                    configMode = configMode,
+                    bridgeConnected = bridge.isConnected(),
+                )
+            ) {
+                configMode = false
+                player.connection.setActiveSessionHandler(
+                    StateRegistry.CONFIG,
+                    ClientConfigSessionHandler(server, player)
+                )
+                onReleased()
+                return@execute
+            }
+
             releaseToVelocityInProgress = true
             releaseToVelocityCallback = {
                 releaseToVelocityInProgress = false
+                configMode = false
                 player.connection.setActiveSessionHandler(
                     StateRegistry.CONFIG,
                     ClientConfigSessionHandler(server, player)
@@ -388,9 +404,14 @@ class OutPreClientBridgeSessionHandler(
 
     override fun handle(packet: FinishedUpdatePacket): Boolean {
         val releaseCallback = releaseToVelocityCallback
-        if (releaseCallback != null && releaseToVelocityInProgress && !configMode) {
+        if (shouldConsumeFinishedUpdateForVelocityRelease(
+                releaseInProgress = releaseCallback != null && releaseToVelocityInProgress,
+                configMode = configMode,
+                bridgeConnected = bridge.isConnected(),
+            )
+        ) {
             releaseToVelocityCallback = null
-            releaseCallback()
+            releaseCallback?.invoke()
             return true
         }
 
@@ -432,7 +453,25 @@ class OutPreClientBridgeSessionHandler(
     override fun disconnected() {
         clearPendingWrites()
         bridge.disconnect()
+        runCatching {
+            player.reflectedTeardown()
+        }
     }
+}
+
+internal fun shouldConsumeFinishedUpdateForVelocityRelease(
+    releaseInProgress: Boolean,
+    configMode: Boolean,
+    bridgeConnected: Boolean,
+): Boolean {
+    return releaseInProgress && (!configMode || !bridgeConnected)
+}
+
+internal fun shouldReleaseDirectlyToVelocityConfig(
+    configMode: Boolean,
+    bridgeConnected: Boolean,
+): Boolean {
+    return configMode && !bridgeConnected
 }
 
 
