@@ -38,6 +38,11 @@ velocity / 主插件 (HyperZoneLogin 核心)
   - 该机制参考并改编自 LuckPerms，详细署名见仓库根目录的 `THIRD_PARTY_NOTICES.md`。
 
 - 无 `limboapi` 时的认证等待区：
+  - `backend-server.conf` 新增 `vServerMode`：
+    - `auto`：优先 Limbo，缺失时回退到真实后端等待服；
+    - `limbo`：强制使用 Limbo；
+    - `backend`：使用当前的后端等待服模式；
+    - `outpre`：在 `GameProfileRequest` 后先接入真实认证服，认证完成后再继续正常初始服流程；
   - 可在 `backend-server.conf` 中配置 `fallbackAuthServer` 为一个真实后端服务器名；
   - 当未安装 `limboapi` 时，未认证玩家会被固定送入该服务器等待认证；
   - 可通过 `postAuthDefaultServer` 配置认证完成后优先进入的子服务器，默认 `play`；

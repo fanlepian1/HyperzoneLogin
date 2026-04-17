@@ -26,6 +26,9 @@ import org.spongepowered.configurate.objectmapping.meta.Comment
 
 @ConfigSerializable
 class BackendServerConfig {
+    @Comment("等待区实现模式：auto / limbo / backend / outpre")
+    val vServerMode: String = "auto"
+
     @Comment("当未安装 limboapi 时，使用真实后端服务器作为认证等待区；留空表示禁用")
     val fallbackAuthServer: String = "lobby"
 

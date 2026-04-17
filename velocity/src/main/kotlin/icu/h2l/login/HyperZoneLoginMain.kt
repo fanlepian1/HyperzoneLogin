@@ -50,6 +50,7 @@ import icu.h2l.login.database.DatabaseHelper
 import icu.h2l.login.inject.network.VelocityNetworkModule
 import icu.h2l.login.vServer.backend.BackendAuthHoldListener
 import icu.h2l.login.vServer.limbo.LimboVServerAuth
+import icu.h2l.login.vServer.outpre.OutPreVServerAuth
 import icu.h2l.login.vServer.command.ExitVServerCommand
 import icu.h2l.login.vServer.command.OverVServerCommand
 import icu.h2l.login.listener.ProfileLayerVerifyListener
@@ -163,17 +164,17 @@ class HyperZoneLoginMain(
 
         activeVServerAdapter = null
 
-        // Soft-dependency: prefer Limbo when available, otherwise fall back to a real backend waiting-area server.
+        val configuredMode = backendServerConfig.vServerMode.trim().lowercase()
         val limboPluginPresent = server.pluginManager.getPlugin("limboapi").isPresent
-        if (limboPluginPresent) {
+        if (configuredMode == "limbo" || (configuredMode == "auto" && limboPluginPresent)) {
             try {
                 val limbo = LimboVServerAuth(server)
                 limbo.load()
                 activeVServerAdapter = limbo
-                logger.info("Limbo plugin detected; using Limbo waiting-area adapter")
+                logger.info("Using Limbo waiting-area adapter")
             } catch (t: Throwable) {
                 logger.error(
-                    "Limbo plugin detected but initialization failed during adapter setup; falling back to backend waiting-area mode if configured",
+                    "Limbo adapter initialization failed; falling back to other configured waiting-area modes if available",
                     t
                 )
             }
@@ -181,7 +182,10 @@ class HyperZoneLoginMain(
 
         if (activeVServerAdapter == null) {
             val configuredFallback = backendServerConfig.fallbackAuthServer.trim()
-            if (configuredFallback.isNotBlank()) {
+            if (configuredFallback.isNotBlank() && configuredMode == "outpre") {
+                activeVServerAdapter = OutPreVServerAuth(server)
+                logger.info("Using outpre waiting-area adapter on backend auth server '$configuredFallback'")
+            } else if (configuredFallback.isNotBlank() && (configuredMode == "backend" || configuredMode == "auto")) {
                 activeVServerAdapter = BackendAuthHoldListener(server)
                 logger.info(
                     if (limboPluginPresent) {
@@ -192,7 +196,9 @@ class HyperZoneLoginMain(
                 )
             } else {
                 logger.info(
-                    if (limboPluginPresent) {
+                    if (configuredMode == "outpre") {
+                        "Outpre mode is enabled but fallbackAuthServer is blank; running without waiting-area adapter"
+                    } else if (limboPluginPresent) {
                         "Limbo unavailable; running without Limbo integration or backend auth hold"
                     } else {
                         "Limbo not present; running without Limbo integration or backend auth hold"

@@ -28,6 +28,7 @@ import com.velocitypowered.api.proxy.crypto.IdentifiedKey
 import com.velocitypowered.api.util.GameProfile
 import com.velocitypowered.proxy.VelocityServer
 import com.velocitypowered.proxy.connection.MinecraftConnection
+import com.velocitypowered.proxy.connection.MinecraftSessionHandler
 import com.velocitypowered.proxy.connection.VelocityConstants
 import com.velocitypowered.proxy.connection.client.AuthSessionHandler
 import com.velocitypowered.proxy.connection.client.InitialLoginSessionHandler
@@ -42,9 +43,12 @@ import com.velocitypowered.proxy.protocol.packet.ServerLoginPacket
 import com.velocitypowered.proxy.util.VelocityProperties
 import icu.h2l.api.event.connection.OpenPreLoginEvent
 import icu.h2l.api.event.connection.OpenStartAuthEvent
+import icu.h2l.login.HyperZoneLoginMain
 import icu.h2l.login.inject.network.NettyReflectionHelper
 import icu.h2l.login.inject.network.NettyReflectionHelper.fireLogin
 import icu.h2l.login.inject.network.VelocityNetworkInjectorImpl
+import icu.h2l.login.vServer.outpre.OutPreAuthSessionHandler
+import icu.h2l.login.vServer.outpre.OutPreVServerAuth
 import io.netty.channel.Channel
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelInboundHandlerAdapter
@@ -349,7 +353,19 @@ class NettyLoginSessionHandler(
         profile: GameProfile?,
         onlineMode: Boolean,
         serverIdHash: String,
-    ): AuthSessionHandler {
+    ): MinecraftSessionHandler {
+        val activeAdapter = HyperZoneLoginMain.getInstance().serverAdapter
+        if (activeAdapter is OutPreVServerAuth) {
+            return OutPreAuthSessionHandler(
+                server = requireNotNull(server),
+                inbound = requireNotNull(inbound),
+                initialProfile = requireNotNull(profile),
+                onlineMode = onlineMode,
+                serverIdHash = serverIdHash,
+                outPre = activeAdapter,
+            )
+        }
+
         return NettyReflectionHelper.createAuthSessionHandler(
             server,
             inbound,
