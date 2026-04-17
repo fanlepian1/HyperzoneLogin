@@ -22,6 +22,8 @@
 package icu.h2l.login.manager
 
 import com.mojang.brigadier.Command
+import com.mojang.brigadier.tree.LiteralCommandNode
+import com.mojang.brigadier.tree.RootCommandNode
 import com.mojang.brigadier.arguments.StringArgumentType
 import com.mojang.brigadier.builder.LiteralArgumentBuilder
 import com.velocitypowered.api.command.BrigadierCommand
@@ -29,6 +31,7 @@ import com.velocitypowered.api.command.CommandSource
 import com.velocitypowered.api.proxy.Player
 import com.velocitypowered.api.proxy.ProxyServer
 import com.velocitypowered.proxy.command.VelocityCommands
+import com.velocitypowered.proxy.protocol.packet.AvailableCommandsPacket
 import com.velocitypowered.proxy.command.brigadier.VelocityArgumentBuilder
 import icu.h2l.api.command.HyperChatBrigadierContext
 import icu.h2l.api.command.HyperChatCommandInvocation
@@ -37,9 +40,15 @@ import icu.h2l.api.command.HyperChatCommandRegistration
 import icu.h2l.api.vServer.HyperZoneVServerAdapter
 import icu.h2l.login.HyperZoneLoginMain
 import icu.h2l.login.message.MessageKeys
+import java.lang.invoke.MethodHandles
 import java.util.concurrent.ConcurrentHashMap
 
 object HyperChatCommandManagerImpl : HyperChatCommandManager {
+    private val availableCommandsRootNodeSetter by lazy {
+        MethodHandles.privateLookupIn(AvailableCommandsPacket::class.java, MethodHandles.lookup())
+            .findSetter(AvailableCommandsPacket::class.java, "rootNode", RootCommandNode::class.java)
+    }
+
     private val commands = ConcurrentHashMap<String, HyperChatCommandRegistration>()
     @Volatile
     private var vServerAdapter: HyperZoneVServerAdapter? = null
@@ -108,8 +117,27 @@ object HyperChatCommandManagerImpl : HyperChatCommandManager {
             return true
         }
 
+        if (source is Player) {
+            val adapter = vServerAdapter
+            val proxy = proxyServer
+            if (adapter != null && proxy != null && adapter.canUseProxyFallbackCommand(source)) {
+                proxy.commandManager.executeImmediatelyAsync(source, body)
+                return true
+            }
+        }
+
         registration.executor.execute(invocation)
         return true
+    }
+
+    fun createAvailableCommandsPacket(source: Player): AvailableCommandsPacket {
+        return populateAvailableCommandsPacket(AvailableCommandsPacket(), source)
+    }
+
+    fun populateAvailableCommandsPacket(packet: AvailableCommandsPacket, source: Player): AvailableCommandsPacket {
+        val root = buildProxyFallbackCommandRoot(source)
+        availableCommandsRootNodeSetter.invoke(packet, root)
+        return packet
     }
 
     override fun getRegisteredCommands(): Collection<HyperChatCommandRegistration> {
@@ -204,6 +232,35 @@ object HyperChatCommandManagerImpl : HyperChatCommandManager {
         }
 
         return rootBuilder
+    }
+
+    internal fun buildProxyFallbackCommandRoot(source: CommandSource): RootCommandNode<CommandSource> {
+        val root = RootCommandNode<CommandSource>()
+        getRegisteredCommands().forEach { registration ->
+            if (!canUseProxyFallbackCommand(registration, source)) {
+                return@forEach
+            }
+
+            val context = HyperChatBrigadierContext(
+                registration = registration,
+                visibility = { commandSource -> canUseProxyFallbackCommand(registration, commandSource) },
+                executor = { commandSource, alias, args -> executeProxyFallback(registration, commandSource, alias, args) },
+            )
+            val primaryNode = createProxyFallbackCommandTree(registration, context).build()
+            addRootLiteral(root, primaryNode)
+            registration.aliases.forEach { alias ->
+                addRootLiteral(root, VelocityCommands.shallowCopy(primaryNode, alias))
+            }
+        }
+        return root
+    }
+
+    private fun addRootLiteral(
+        root: RootCommandNode<CommandSource>,
+        node: LiteralCommandNode<CommandSource>,
+    ) {
+        root.removeChildByName(node.name)
+        root.addChild(node)
     }
 
     private fun executeProxyFallback(

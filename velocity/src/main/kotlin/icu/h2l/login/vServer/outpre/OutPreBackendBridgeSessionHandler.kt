@@ -29,6 +29,7 @@ import com.velocitypowered.proxy.connection.PlayerDataForwarding
 import com.velocitypowered.proxy.protocol.MinecraftPacket
 import com.velocitypowered.proxy.protocol.StateRegistry
 import com.velocitypowered.proxy.protocol.netty.MinecraftEncoder
+import com.velocitypowered.proxy.protocol.packet.AvailableCommandsPacket
 import com.velocitypowered.proxy.protocol.packet.ClientboundCookieRequestPacket
 import com.velocitypowered.proxy.protocol.packet.ClientboundStoreCookiePacket
 import com.velocitypowered.proxy.protocol.packet.DisconnectPacket
@@ -51,6 +52,7 @@ import com.velocitypowered.proxy.protocol.packet.config.FinishedUpdatePacket
 import com.velocitypowered.proxy.protocol.packet.config.RegistrySyncPacket
 import com.velocitypowered.proxy.protocol.packet.config.StartUpdatePacket
 import com.velocitypowered.proxy.protocol.packet.config.TagsUpdatePacket
+import icu.h2l.login.manager.HyperChatCommandManagerImpl
 import io.netty.buffer.ByteBuf
 import io.netty.buffer.Unpooled
 import io.netty.util.ReferenceCountUtil
@@ -60,6 +62,23 @@ class OutPreBackendBridgeSessionHandler(
     private val bridge: OutPreBackendBridge,
 ) : MinecraftSessionHandler {
     private var modernForwardingSent = false
+
+    private fun refreshWaitingAreaCommands(force: Boolean = false) {
+        val clientHandler = bridge.player.connection.activeSessionHandler as? OutPreClientBridgeSessionHandler
+        if (clientHandler != null) {
+            clientHandler.refreshWaitingAreaCommands(force)
+            return
+        }
+
+        if (bridge.player.protocolVersion.lessThan(ProtocolVersion.MINECRAFT_1_13)) {
+            return
+        }
+
+        bridge.player.connection.eventLoop().execute {
+            bridge.player.connection.write(HyperChatCommandManagerImpl.createAvailableCommandsPacket(bridge.player))
+            bridge.player.connection.flush()
+        }
+    }
 
     private fun forwardPacketToPlayer(packet: MinecraftPacket) {
         bridge.player.connection.write(ReferenceCountUtil.retain(packet))
@@ -137,6 +156,7 @@ class OutPreBackendBridgeSessionHandler(
         forwardPacketToPlayer(packet)
         bridge.onBackendJoined()
         bridge.ensureConnected().setActiveSessionHandler(StateRegistry.PLAY, this)
+        refreshWaitingAreaCommands(force = true)
         return true
     }
 
@@ -215,7 +235,13 @@ class OutPreBackendBridgeSessionHandler(
     }
 
     override fun handleGeneric(packet: MinecraftPacket) {
-        forwardPacketToPlayer(packet)
+        when (packet) {
+            is AvailableCommandsPacket -> {
+                refreshWaitingAreaCommands(force = true)
+            }
+
+            else -> forwardPacketToPlayer(packet)
+        }
     }
 
     override fun handleUnknown(buf: ByteBuf) {

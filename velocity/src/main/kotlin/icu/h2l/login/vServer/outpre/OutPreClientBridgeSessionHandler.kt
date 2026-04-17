@@ -21,6 +21,7 @@
 
 package icu.h2l.login.vServer.outpre
 
+import com.velocitypowered.api.network.ProtocolVersion
 import com.velocitypowered.proxy.connection.MinecraftSessionHandler
 import com.velocitypowered.proxy.connection.client.ConnectedPlayer
 import com.velocitypowered.proxy.protocol.MinecraftPacket
@@ -38,11 +39,14 @@ import com.velocitypowered.proxy.protocol.packet.chat.ChatAcknowledgementPacket
 import com.velocitypowered.proxy.protocol.packet.chat.PlayerChatCompletionPacket
 import com.velocitypowered.proxy.protocol.packet.chat.keyed.KeyedPlayerChatPacket
 import com.velocitypowered.proxy.protocol.packet.chat.keyed.KeyedPlayerCommandPacket
+import com.velocitypowered.proxy.protocol.packet.chat.legacy.LegacyChatPacket
 import com.velocitypowered.proxy.protocol.packet.chat.session.SessionPlayerChatPacket
 import com.velocitypowered.proxy.protocol.packet.chat.session.SessionPlayerCommandPacket
+import com.velocitypowered.proxy.protocol.packet.chat.session.UnsignedPlayerCommandPacket
 import com.velocitypowered.proxy.protocol.packet.config.CodeOfConductAcceptPacket
 import com.velocitypowered.proxy.protocol.packet.config.FinishedUpdatePacket
 import com.velocitypowered.proxy.protocol.packet.config.KnownPacksPacket
+import icu.h2l.login.manager.HyperChatCommandManagerImpl
 import io.netty.buffer.ByteBuf
 import io.netty.buffer.Unpooled
 import io.netty.util.ReferenceCountUtil
@@ -65,7 +69,13 @@ class OutPreClientBridgeSessionHandler(
     private var deferredBrandChannel: String? = null
     private var deferredBrandMessage: String? = null
     @Volatile
+    private var waitingAreaCommandsSent = false
+    @Volatile
     private var phaseCallbackRegistered = false
+
+    init {
+        ensurePhaseCallback()
+    }
 
     private fun backend() = bridge.ensureConnected()
 
@@ -153,9 +163,41 @@ class OutPreClientBridgeSessionHandler(
                     clearPendingWrites()
                     return@execute
                 }
+                maybeSendWaitingAreaCommands()
                 flushPendingWrites()
             }
         }
+    }
+
+    private fun maybeSendWaitingAreaCommands() {
+        maybeSendWaitingAreaCommands(force = false)
+    }
+
+    private fun maybeSendWaitingAreaCommands(force: Boolean) {
+        if ((!force && waitingAreaCommandsSent)
+            || configMode
+            || bridge.phase() != OutPreBackendBridge.Phase.PLAY_READY
+            || player.protocolVersion.lessThan(ProtocolVersion.MINECRAFT_1_13)
+        ) {
+            return
+        }
+        waitingAreaCommandsSent = true
+        player.connection.write(HyperChatCommandManagerImpl.createAvailableCommandsPacket(player))
+        player.connection.flush()
+    }
+
+    fun refreshWaitingAreaCommands(force: Boolean = false) {
+        player.connection.eventLoop().execute {
+            if (force) {
+                waitingAreaCommandsSent = false
+            }
+            maybeSendWaitingAreaCommands(force)
+        }
+    }
+
+    private fun handleWaitingAreaInput(rawInput: String): Boolean {
+        HyperChatCommandManagerImpl.executeChat(player, rawInput)
+        return true
     }
 
     private fun flushPendingWrites() {
@@ -281,23 +323,19 @@ class OutPreClientBridgeSessionHandler(
     }
 
     override fun handle(packet: KeyedPlayerChatPacket): Boolean {
-        sendOrQueue(OutPreBackendBridge.Phase.PLAY_READY) { it.write(packet) }
-        return true
+        return handleWaitingAreaInput(packet.message)
     }
 
     override fun handle(packet: SessionPlayerChatPacket): Boolean {
-        sendOrQueue(OutPreBackendBridge.Phase.PLAY_READY) { it.write(packet) }
-        return true
+        return handleWaitingAreaInput(packet.message)
     }
 
     override fun handle(packet: KeyedPlayerCommandPacket): Boolean {
-        sendOrQueue(OutPreBackendBridge.Phase.PLAY_READY) { it.write(packet) }
-        return true
+        return handleWaitingAreaInput("/${packet.command}")
     }
 
     override fun handle(packet: SessionPlayerCommandPacket): Boolean {
-        sendOrQueue(OutPreBackendBridge.Phase.PLAY_READY) { it.write(packet) }
-        return true
+        return handleWaitingAreaInput("/${packet.command}")
     }
 
     override fun handle(packet: PlayerChatCompletionPacket): Boolean {
@@ -320,6 +358,7 @@ class OutPreClientBridgeSessionHandler(
             bridge.completeConfigurationFromClientAck()
             configMode = false
             player.connection.setActiveSessionHandler(StateRegistry.PLAY, this)
+            maybeSendWaitingAreaCommands(force = true)
             return true
         }
         sendOrQueue(activeClientPhase()) { it.write(packet) }
@@ -327,6 +366,17 @@ class OutPreClientBridgeSessionHandler(
     }
 
     override fun handleGeneric(packet: MinecraftPacket) {
+        when (packet) {
+            is LegacyChatPacket -> {
+                handleWaitingAreaInput(packet.message)
+                return
+            }
+
+            is UnsignedPlayerCommandPacket -> {
+                handleWaitingAreaInput("/${packet.command}")
+                return
+            }
+        }
         sendOrQueuePacket(activeClientPhase(), packet)
     }
 
