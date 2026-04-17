@@ -300,7 +300,15 @@ class BackendAuthHoldListener(
         return true
     }
 
-    override fun canUseProxyFallbackCommand(player: Player): Boolean {
+    override fun supportsBackendPlayerInfoFilter(): Boolean {
+        return HyperZoneLoginMain.getBackendServerConfig().enableWaitingAreaPlayerInfoCompensation
+    }
+
+    override fun supportsBackendRuntimeProfileCompensation(): Boolean {
+        return HyperZoneLoginMain.getBackendServerConfig().enableRuntimeProfileCompensation
+    }
+
+    override fun allowsProxyFallbackCommand(player: Player): Boolean {
         /**
          * 这里必须按“当前是否位于后端等待区服务器”判断，不能再复用一次性的 hold 状态。
          *

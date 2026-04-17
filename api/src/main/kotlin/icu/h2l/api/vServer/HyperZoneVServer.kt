@@ -28,7 +28,7 @@ import icu.h2l.api.command.HyperChatCommandRegistration
 /**
  * 登录等待区 / 认证虚拟服 的统一抽象。
  *
- * 这里不再把上层逻辑绑定到具体的 Limbo 或后端等待服实现；
+ * 这里不再把上层逻辑绑定到具体的等待区实现；
  * 只暴露“进入等待区、注册等待区命令、判断代理兜底命令是否可用、
  * 完成认证后的收尾、主动退出等待区”等公共能力。
  *
@@ -68,7 +68,7 @@ interface HyperZoneVServerAdapter {
      *
      * 这里和 [icu.h2l.api.player.HyperZonePlayer.isInWaitingArea] 不同：
      * 后者描述的是“认证/Profile 链路是否仍未完成”，
-     * 而这里要求由具体实现返回“玩家当前是否还在 Limbo / 后端认证等待服”这一运行态。
+     * 而这里要求由具体实现返回“玩家当前是否仍在该等待区实现内部”这一运行态。
      */
     fun isPlayerInWaitingArea(player: Player): Boolean = false
 
@@ -88,14 +88,30 @@ interface HyperZoneVServerAdapter {
     /**
      * 判断指定玩家当前是否允许使用代理层兜底命令。
      */
-    fun canUseProxyFallbackCommand(player: Player): Boolean = false
+    fun allowsProxyFallbackCommand(player: Player): Boolean = false
+
+    /**
+     * 当前等待区实现是否需要后端 PlayerInfo/TabList 兼容补偿。
+     *
+     * 该能力主要服务于 backend 模式下的真实等待服；
+     * outpre 应优先在自己的桥接链路中直接处理，而不是依赖额外 Netty 补丁擦屁股。
+     */
+    fun supportsBackendPlayerInfoFilter(): Boolean = false
+
+    /**
+     * 当前等待区实现是否需要 attach 后的运行时 GameProfile 补偿同步。
+     *
+     * backend 模式在玩家已经注册进 Velocity 后，仍可能需要对在线索引做补偿；
+     * outpre 应在最终交付给 Velocity 之前自行完成最终 Profile 挂载。
+     */
+    fun supportsBackendRuntimeProfileCompensation(): Boolean = false
 
     /**
      * 退出当前等待区。
      *
      * 注意：这里的“退出”语义由具体实现决定，但必须符合该实现的原生行为。
      * - 对真实后端等待服实现，应尽量把玩家送回进入等待区前的目标服务器；
-     * - 对 Limbo 实现，断开 Limbo 会话本身就是退出等待区。
+     * - 对自维护连接的实现，退出语义由实现自行定义。
      *
      * @return 是否已接受本次退出请求
      */

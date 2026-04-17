@@ -120,7 +120,7 @@ object HyperChatCommandManagerImpl : HyperChatCommandManager {
         if (source is Player) {
             val adapter = vServerAdapter
             val proxy = proxyServer
-            if (adapter != null && proxy != null && adapter.canUseProxyFallbackCommand(source)) {
+            if (adapter != null && proxy != null && adapter.allowsProxyFallbackCommand(source)) {
                 proxy.commandManager.executeImmediatelyAsync(source, body)
                 return true
             }
@@ -168,7 +168,7 @@ object HyperChatCommandManagerImpl : HyperChatCommandManager {
 
         val brigadierContext = HyperChatBrigadierContext(
             registration = registration,
-            visibility = { source -> canUseProxyFallbackCommand(registration, source) },
+            visibility = { source -> allowsProxyFallbackCommand(registration, source) },
             executor = { source, alias, args -> executeProxyFallback(registration, source, alias, args) }
         )
         val rootBuilder = createProxyFallbackCommandTree(registration, brigadierContext)
@@ -182,7 +182,7 @@ object HyperChatCommandManagerImpl : HyperChatCommandManager {
         proxy.commandManager.register(metaBuilder.build(), brigadierCommand)
     }
 
-    private fun canUseProxyFallbackCommand(
+    private fun allowsProxyFallbackCommand(
         registration: HyperChatCommandRegistration,
         source: CommandSource
     ): Boolean {
@@ -191,7 +191,7 @@ object HyperChatCommandManagerImpl : HyperChatCommandManager {
         }
 
         val adapter = vServerAdapter ?: return false
-        if (!adapter.canUseProxyFallbackCommand(source)) {
+        if (!adapter.allowsProxyFallbackCommand(source)) {
             return false
         }
 
@@ -237,13 +237,13 @@ object HyperChatCommandManagerImpl : HyperChatCommandManager {
     internal fun buildProxyFallbackCommandRoot(source: CommandSource): RootCommandNode<CommandSource> {
         val root = RootCommandNode<CommandSource>()
         getRegisteredCommands().forEach { registration ->
-            if (!canUseProxyFallbackCommand(registration, source)) {
+            if (!allowsProxyFallbackCommand(registration, source)) {
                 return@forEach
             }
 
             val context = HyperChatBrigadierContext(
                 registration = registration,
-                visibility = { commandSource -> canUseProxyFallbackCommand(registration, commandSource) },
+                visibility = { commandSource -> allowsProxyFallbackCommand(registration, commandSource) },
                 executor = { commandSource, alias, args -> executeProxyFallback(registration, commandSource, alias, args) },
             )
             val primaryNode = createProxyFallbackCommandTree(registration, context).build()
@@ -276,7 +276,7 @@ object HyperChatCommandManagerImpl : HyperChatCommandManager {
         }
 
         val adapter = vServerAdapter
-        if (adapter == null || !adapter.canUseProxyFallbackCommand(source)) {
+        if (adapter == null || !adapter.allowsProxyFallbackCommand(source)) {
             messages.send(source, MessageKeys.Chat.WAITING_AREA_ONLY)
             return Command.SINGLE_SUCCESS
         }

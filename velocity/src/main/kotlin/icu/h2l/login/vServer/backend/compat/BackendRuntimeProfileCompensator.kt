@@ -19,7 +19,7 @@
  *
  */
 
-package icu.h2l.login.profile
+package icu.h2l.login.vServer.backend.compat
 
 import com.velocitypowered.api.event.Subscribe
 import com.velocitypowered.api.network.ProtocolVersion
@@ -30,25 +30,30 @@ import com.velocitypowered.proxy.server.VelocityRegisteredServer
 import icu.h2l.api.db.Profile
 import icu.h2l.api.event.profile.ProfileAttachedEvent
 import icu.h2l.login.HyperZoneLoginMain
+import icu.h2l.login.profile.VelocityHyperZoneProfileService
 import net.kyori.adventure.text.logger.slf4j.ComponentLogger
 import java.lang.reflect.Field
 import java.util.Locale
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
 
-class VCProfileManager(
+class BackendRuntimeProfileCompensator(
     private val profileService: VelocityHyperZoneProfileService,
-    private val logger: ComponentLogger
+    private val logger: ComponentLogger,
 ) {
     /**
-     * 该管理器只面向 `attachProfile` 之后的正式 Profile / 游戏区流程。
+     * backend 模式专用：在玩家已经注册进 Velocity 后，
+     * 对 attach 后的正式 Profile 做在线运行时补偿同步。
      *
-     * 禁止把等待区 `/rename`、`/reUUID` 或其他不可信临时态入口直接接到这里，
-     * 否则会把等待区高变化临时状态错误外溢到正式身份补偿同步流程。
+     * outpre 不应依赖该补偿；outpre 应在正式交付给 Velocity 前
+     * 自己完成最终 GameProfile 挂载。
      */
     @Subscribe
     fun onProfileAttached(event: ProfileAttachedEvent) {
-        if (!HyperZoneLoginMain.getMiscConfig().enableReplaceGameProfile) {
+        val main = HyperZoneLoginMain.getInstance()
+        if (!HyperZoneLoginMain.getMiscConfig().enableReplaceGameProfile
+            || main.serverAdapter?.supportsBackendRuntimeProfileCompensation() != true
+        ) {
             return
         }
 
@@ -57,25 +62,25 @@ class VCProfileManager(
         val connectedPlayer = proxyPlayer as? ConnectedPlayer
         if (connectedPlayer == null) {
             logger.warn(
-                "VCProfileManager 在 ProfileAttachedEvent 中未找到可用的 ConnectedPlayer: clientOriginal=${event.hyperZonePlayer.clientOriginalName}, profileId=${attachedProfile.id}"
+                "BackendRuntimeProfileCompensator 在 ProfileAttachedEvent 中未找到可用的 ConnectedPlayer: clientOriginal=${event.hyperZonePlayer.clientOriginalName}, profileId=${attachedProfile.id}"
             )
             return
         }
 
-        val proxyServer = HyperZoneLoginMain.getInstance().proxy as? VelocityServer
+        val proxyServer = main.proxy as? VelocityServer
             ?: run {
-                logger.warn("VCProfileManager 未拿到 VelocityServer，跳过 attach 后正式身份同步")
+                logger.warn("BackendRuntimeProfileCompensator 未拿到 VelocityServer，跳过 backend attach 后的正式身份补偿同步")
                 return
             }
 
-        val isRegisteredInProxy = ReflectionAccess.connectionsByUuid(proxyServer).values.any { it === connectedPlayer }
-            || ReflectionAccess.connectionsByName(proxyServer).values.any { it === connectedPlayer }
+        val isRegisteredInProxy = BackendRuntimeProfileCompensationReflection.connectionsByUuid(proxyServer).values.any { it === connectedPlayer }
+            || BackendRuntimeProfileCompensationReflection.connectionsByName(proxyServer).values.any { it === connectedPlayer }
         val currentGameProfile = connectedPlayer.gameProfile
-        val targetGameProfile = resolveRuntimeGameProfile(
+        val targetGameProfile = buildDeliveredGameProfile(
             currentGameProfile = currentGameProfile,
             attachedProfile = attachedProfile,
             enableNameHotChange = HyperZoneLoginMain.getMiscConfig().enableNameHotChange,
-            enableUuidHotChange = HyperZoneLoginMain.getMiscConfig().enableUuidHotChange
+            enableUuidHotChange = HyperZoneLoginMain.getMiscConfig().enableUuidHotChange,
         )
         if (currentGameProfile == targetGameProfile) {
             return
@@ -86,8 +91,8 @@ class VCProfileManager(
                 applyPreRegistrationProfileSwap(connectedPlayer, targetGameProfile)
             }.onFailure { throwable ->
                 logger.error(
-                    "VCProfileManager 为未注册的 ConnectedPlayer 应用 attach 后正式身份失败: player=${connectedPlayer.username}, profileId=${attachedProfile.id}, reason=${throwable.message}",
-                    throwable
+                    "BackendRuntimeProfileCompensator 为未注册的 ConnectedPlayer 应用 attach 后正式身份失败: player=${connectedPlayer.username}, profileId=${attachedProfile.id}, reason=${throwable.message}",
+                    throwable,
                 )
             }
             return
@@ -97,8 +102,8 @@ class VCProfileManager(
             applyRuntimeProfileSwap(connectedPlayer, currentGameProfile, targetGameProfile)
         }.onFailure { throwable ->
             logger.error(
-                "VCProfileManager 应用 attach 后的正式身份失败: player=${connectedPlayer.username}, profileId=${attachedProfile.id}, reason=${throwable.message}",
-                throwable
+                "BackendRuntimeProfileCompensator 应用 attach 后的正式身份失败: player=${connectedPlayer.username}, profileId=${attachedProfile.id}, reason=${throwable.message}",
+                throwable,
             )
             return
         }
@@ -111,23 +116,23 @@ class VCProfileManager(
     private fun applyRuntimeProfileSwap(
         player: ConnectedPlayer,
         oldGameProfile: GameProfile,
-        newGameProfile: GameProfile
+        newGameProfile: GameProfile,
     ) {
         val proxyServer = HyperZoneLoginMain.getInstance().proxy as? VelocityServer
-            ?: throw IllegalStateException("当前代理实例不是 VelocityServer，无法执行 VC 热改")
+            ?: throw IllegalStateException("当前代理实例不是 VelocityServer，无法执行 backend runtime profile 补偿")
         executeOnPlayerEventLoop(player) {
-            ProfileCompensationSupport.applyCompensatingSync(
+            BackendRuntimeProfileIndexCompensator.applyCompensatingSync(
                 connection = player,
                 newNameLower = newGameProfile.name.lowercase(Locale.US),
                 oldUuid = oldGameProfile.id,
                 newUuid = newGameProfile.id,
-                connectionsByName = ReflectionAccess.connectionsByName(proxyServer),
-                connectionsByUuid = ReflectionAccess.connectionsByUuid(proxyServer),
+                connectionsByName = BackendRuntimeProfileCompensationReflection.connectionsByName(proxyServer),
+                connectionsByUuid = BackendRuntimeProfileCompensationReflection.connectionsByUuid(proxyServer),
                 serverPlayers = proxyServer.allServers
                     .mapNotNull { it as? VelocityRegisteredServer }
-                    .map { ReflectionAccess.players(it) },
-                replaceProfile = { ReflectionAccess.profileField.set(player, newGameProfile) },
-                rollbackProfile = { ReflectionAccess.profileField.set(player, oldGameProfile) }
+                    .map { BackendRuntimeProfileCompensationReflection.players(it) },
+                replaceProfile = { BackendRuntimeProfileCompensationReflection.profileField.set(player, newGameProfile) },
+                rollbackProfile = { BackendRuntimeProfileCompensationReflection.profileField.set(player, oldGameProfile) },
             )
         }
     }
@@ -137,7 +142,7 @@ class VCProfileManager(
         newGameProfile: GameProfile,
     ) {
         executeOnPlayerEventLoop(player) {
-            ReflectionAccess.profileField.set(player, newGameProfile)
+            BackendRuntimeProfileCompensationReflection.profileField.set(player, newGameProfile)
         }
     }
 
@@ -148,11 +153,11 @@ class VCProfileManager(
         val signatureHolder = player.identifiedKey?.signatureHolder
         if (signatureHolder != null && signatureHolder != newUuid) {
             logger.warn(
-                "VCProfileManager 检测到 UUID 热改后的签名持有者不一致: player=${player.username}, oldUuid=$oldUuid, newUuid=$newUuid, signatureHolder=$signatureHolder"
+                "BackendRuntimeProfileCompensator 检测到 UUID 热改后的签名持有者不一致: player=${player.username}, oldUuid=$oldUuid, newUuid=$newUuid, signatureHolder=$signatureHolder",
             )
         } else {
             logger.warn(
-                "VCProfileManager 已执行 UUID 热改: player=${player.username}, oldUuid=$oldUuid, newUuid=$newUuid。"
+                "BackendRuntimeProfileCompensator 已执行 UUID 热改: player=${player.username}, oldUuid=$oldUuid, newUuid=$newUuid。",
             )
         }
     }
@@ -171,50 +176,20 @@ class VCProfileManager(
         }
         return future.join()
     }
-
-    private object ReflectionAccess {
-        val profileField: Field = ConnectedPlayer::class.java.getDeclaredField("profile").apply {
-            isAccessible = true
-        }
-        private val connectionsByNameField: Field = VelocityServer::class.java.getDeclaredField("connectionsByName").apply {
-            isAccessible = true
-        }
-        private val connectionsByUuidField: Field = VelocityServer::class.java.getDeclaredField("connectionsByUuid").apply {
-            isAccessible = true
-        }
-        private val registeredServerPlayersField: Field = VelocityRegisteredServer::class.java.getDeclaredField("players").apply {
-            isAccessible = true
-        }
-
-        @Suppress("UNCHECKED_CAST")
-        fun connectionsByName(server: VelocityServer): MutableMap<String, ConnectedPlayer> {
-            return connectionsByNameField.get(server) as MutableMap<String, ConnectedPlayer>
-        }
-
-        @Suppress("UNCHECKED_CAST")
-        fun connectionsByUuid(server: VelocityServer): MutableMap<UUID, ConnectedPlayer> {
-            return connectionsByUuidField.get(server) as MutableMap<UUID, ConnectedPlayer>
-        }
-
-        @Suppress("UNCHECKED_CAST")
-        fun players(server: VelocityRegisteredServer): MutableMap<UUID, ConnectedPlayer> {
-            return registeredServerPlayersField.get(server) as MutableMap<UUID, ConnectedPlayer>
-        }
-    }
 }
 
-internal fun resolveRuntimeGameProfile(
+internal fun buildDeliveredGameProfile(
     currentGameProfile: GameProfile,
     attachedProfile: Profile,
     enableNameHotChange: Boolean,
-    enableUuidHotChange: Boolean
+    enableUuidHotChange: Boolean,
 ): GameProfile {
     val resolvedName = if (enableNameHotChange) attachedProfile.name else currentGameProfile.name
     val resolvedUuid = if (enableUuidHotChange) attachedProfile.uuid else currentGameProfile.id
     return GameProfile(resolvedUuid, resolvedName, currentGameProfile.properties)
 }
 
-internal object ProfileCompensationSupport {
+internal object BackendRuntimeProfileIndexCompensator {
     fun <T> applyCompensatingSync(
         connection: T,
         newNameLower: String,
@@ -225,7 +200,7 @@ internal object ProfileCompensationSupport {
         serverPlayers: List<MutableMap<UUID, T>>,
         replaceProfile: () -> Unit,
         rollbackProfile: () -> Unit,
-        postSyncHook: (() -> Unit)? = null
+        postSyncHook: (() -> Unit)? = null,
     ) {
         val nameSnapshot = LinkedHashMap(connectionsByName)
         val uuidSnapshot = LinkedHashMap(connectionsByUuid)
@@ -257,7 +232,7 @@ internal object ProfileCompensationSupport {
         newUuid: UUID,
         connectionsByName: MutableMap<String, T>,
         connectionsByUuid: MutableMap<UUID, T>,
-        serverPlayers: List<MutableMap<UUID, T>>
+        serverPlayers: List<MutableMap<UUID, T>>,
     ) {
         val existingByName = connectionsByName[newNameLower]
         if (existingByName != null && existingByName !== connection) {
@@ -304,6 +279,33 @@ internal object ProfileCompensationSupport {
     }
 }
 
+internal object BackendRuntimeProfileCompensationReflection {
+    val profileField: Field = ConnectedPlayer::class.java.getDeclaredField("profile").apply {
+        isAccessible = true
+    }
+    private val connectionsByNameField: Field = VelocityServer::class.java.getDeclaredField("connectionsByName").apply {
+        isAccessible = true
+    }
+    private val connectionsByUuidField: Field = VelocityServer::class.java.getDeclaredField("connectionsByUuid").apply {
+        isAccessible = true
+    }
+    private val registeredServerPlayersField: Field = VelocityRegisteredServer::class.java.getDeclaredField("players").apply {
+        isAccessible = true
+    }
 
+    @Suppress("UNCHECKED_CAST")
+    fun connectionsByName(server: VelocityServer): MutableMap<String, ConnectedPlayer> {
+        return connectionsByNameField.get(server) as MutableMap<String, ConnectedPlayer>
+    }
 
+    @Suppress("UNCHECKED_CAST")
+    fun connectionsByUuid(server: VelocityServer): MutableMap<UUID, ConnectedPlayer> {
+        return connectionsByUuidField.get(server) as MutableMap<UUID, ConnectedPlayer>
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    fun players(server: VelocityRegisteredServer): MutableMap<UUID, ConnectedPlayer> {
+        return registeredServerPlayersField.get(server) as MutableMap<UUID, ConnectedPlayer>
+    }
+}
 

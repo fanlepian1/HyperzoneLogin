@@ -162,7 +162,7 @@ class OutPreVServerAuth(
         return true
     }
 
-    override fun canUseProxyFallbackCommand(player: Player): Boolean {
+    override fun allowsProxyFallbackCommand(player: Player): Boolean {
         return states.containsKey(player.getChannel())
     }
 

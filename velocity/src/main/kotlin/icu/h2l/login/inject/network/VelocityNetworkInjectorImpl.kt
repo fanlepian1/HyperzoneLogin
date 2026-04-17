@@ -26,12 +26,13 @@ import com.velocitypowered.proxy.VelocityServer
 import com.velocitypowered.proxy.connection.MinecraftConnection
 import com.velocitypowered.proxy.network.ConnectionManager
 import com.velocitypowered.proxy.network.Endpoint
+import icu.h2l.login.HyperZoneLoginMain
 import icu.h2l.login.inject.network.netty.NettyLoginSessionHandler
 import icu.h2l.login.inject.network.netty.SeverChannelAcceptAdapter
 import icu.h2l.login.inject.network.netty.replacer.ServerLoginSuccessPacketReplacer
 import icu.h2l.login.inject.network.netty.replacer.ToBackendPacketReplacer
-import icu.h2l.login.inject.network.netty.replacer.WaitingAreaUpsertPlayerInfoPacketReplacer
 import icu.h2l.login.inject.network.netty.ViaChannelInitializer
+import icu.h2l.login.vServer.backend.compat.BackendWaitingAreaPlayerInfoFilter
 import io.netty.channel.Channel
 import java.net.InetSocketAddress
 
@@ -94,7 +95,9 @@ class VelocityNetworkInjectorImpl(
             initializer.set(object : ViaChannelInitializer(old) {
                 override fun injectChannel(channel: Channel) {
                     channel.pipeline().addLast("sl_r_rpl", ToBackendPacketReplacer(channel))
-                    channel.pipeline().addLast("h2l_waiting_upsert_filter", WaitingAreaUpsertPlayerInfoPacketReplacer())
+                    if (HyperZoneLoginMain.getInstance().serverAdapter?.supportsBackendPlayerInfoFilter() == true) {
+                        channel.pipeline().addLast("h2l_waiting_upsert_filter", BackendWaitingAreaPlayerInfoFilter())
+                    }
 //                    println("SVA: ${channel.pipeline().names()}")
                 }
             })

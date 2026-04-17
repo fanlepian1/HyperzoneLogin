@@ -53,8 +53,8 @@ import icu.h2l.login.inject.network.NettyReflectionHelper.reflectedDelegatedConn
 import icu.h2l.login.inject.network.NettyReflectionHelper.reflectedTeardown
 import icu.h2l.login.listener.ProfileLayerVerifyListener
 import icu.h2l.login.manager.HyperZonePlayerManager
+import icu.h2l.login.vServer.backend.compat.buildDeliveredGameProfile
 import io.netty.buffer.ByteBuf
-import icu.h2l.login.profile.resolveRuntimeGameProfile
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
 import org.apache.logging.log4j.LogManager
@@ -192,7 +192,7 @@ class OutPreAuthSessionHandler(
             return
         }
 
-        val finalCandidateProfile = resolveRuntimeGameProfile(
+        val finalCandidateProfile = buildDeliveredGameProfile(
             currentGameProfile = player.gameProfile,
             attachedProfile = attachedProfile,
             enableNameHotChange = HyperZoneLoginMain.getMiscConfig().enableNameHotChange,
