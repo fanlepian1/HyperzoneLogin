@@ -23,9 +23,11 @@ package icu.h2l.login.vServer.outpre
 
 import com.velocitypowered.api.event.connection.DisconnectEvent
 import com.velocitypowered.api.event.connection.LoginEvent
+import com.velocitypowered.api.event.connection.PostLoginEvent
 import com.velocitypowered.api.event.permission.PermissionsSetupEvent
 import com.velocitypowered.api.event.player.CookieReceiveEvent
 import com.velocitypowered.api.event.player.GameProfileRequestEvent
+import com.velocitypowered.api.event.player.PlayerChooseInitialServerEvent
 import com.velocitypowered.api.network.ProtocolVersion
 import com.velocitypowered.api.permission.PermissionFunction
 import com.velocitypowered.api.proxy.crypto.IdentifiedKey
@@ -36,7 +38,6 @@ import com.velocitypowered.proxy.config.PlayerInfoForwarding
 import com.velocitypowered.proxy.connection.MinecraftConnection
 import com.velocitypowered.proxy.connection.MinecraftSessionHandler
 import com.velocitypowered.proxy.connection.client.AuthSessionHandler
-import com.velocitypowered.proxy.connection.client.ClientConfigSessionHandler
 import com.velocitypowered.proxy.connection.client.ConnectedPlayer
 import com.velocitypowered.proxy.connection.client.LoginInboundConnection
 import com.velocitypowered.proxy.crypto.IdentifiedKeyImpl
@@ -49,12 +50,13 @@ import icu.h2l.login.inject.network.NettyReflectionHelper
 import icu.h2l.login.inject.network.NettyReflectionHelper.reflectedCleanup
 import icu.h2l.login.inject.network.NettyReflectionHelper.reflectedDelegatedConnection
 import icu.h2l.login.inject.network.NettyReflectionHelper.reflectedTeardown
+import icu.h2l.login.listener.ProfileLayerVerifyListener
+import icu.h2l.login.manager.HyperZonePlayerManager
 import io.netty.buffer.ByteBuf
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
-import org.checkerframework.checker.nullness.qual.MonotonicNonNull
 import java.util.Objects
 import java.util.Optional
 import java.util.UUID
@@ -63,8 +65,9 @@ import java.util.concurrent.CompletableFuture
 /**
  * outpre 模式的登录完成处理器。
  *
- * 它保留 Velocity 在 GameProfileRequest 之后构造 `ConnectedPlayer` 的时机，
- * 但把“正常初始服选择 + PostLogin”延后到等待服认证完成之后。
+ * 第一阶段只完成“客户端可进入代理 + 认证服桥接”；
+ * 真正的 Velocity 注册 / GameProfileRequest / Login / PostLogin
+ * 会在认证完成后再继续执行。
  */
 class OutPreAuthSessionHandler(
     private val server: VelocityServer,
@@ -86,59 +89,33 @@ class OutPreAuthSessionHandler(
     override fun activated() {
         profile = mcConnection.type.addGameProfileTokensIfRequired(
             profile,
-            server.configuration.playerInfoForwardingMode
+            server.configuration.playerInfoForwardingMode,
         )
-        val profileRequestEvent = GameProfileRequestEvent(inbound, profile, onlineMode)
-        val finalProfile = profile
 
-        server.eventManager.fire(profileRequestEvent).thenComposeAsync({ profileEvent ->
-            if (mcConnection.isClosed) {
-                return@thenComposeAsync CompletableFuture.completedFuture(null)
-            }
+        val player = NettyReflectionHelper.createConnectedPlayer(
+            server = server,
+            inbound = inbound,
+            profile = profile,
+            onlineMode = onlineMode,
+        )
+        connectedPlayer = player
 
-            val player = NettyReflectionHelper.createConnectedPlayer(
-                server = server,
-                inbound = inbound,
-                profile = profileEvent.gameProfile,
-                onlineMode = onlineMode,
+        if (!server.canRegisterConnection(player)) {
+            player.disconnect0(
+                Component.translatable("velocity.error.already-connected-proxy", NamedTextColor.RED),
+                true,
             )
-            connectedPlayer = player
-            if (!server.canRegisterConnection(player)) {
-                player.disconnect0(
-                    Component.translatable("velocity.error.already-connected-proxy", NamedTextColor.RED),
-                    true,
-                )
-                return@thenComposeAsync CompletableFuture.completedFuture(null)
-            }
-
-            if (server.configuration.isLogPlayerConnections) {
-                logger.info("{} has connected", player)
-            }
-
-            server.eventManager.fire(
-                PermissionsSetupEvent(player, NettyReflectionHelper.defaultPermissions())
-            ).thenAcceptAsync({ event ->
-                if (!mcConnection.isClosed) {
-                    val function: PermissionFunction? = event.createFunction(player)
-                    if (function == null) {
-                        logger.error(
-                            "A plugin permission provider {} provided an invalid permission function for player {}. Falling back to the default permission function.",
-                            event.provider.javaClass.name,
-                            player.username,
-                        )
-                    } else {
-                        NettyReflectionHelper.setPermissionFunction(player, function)
-                    }
-                    startLoginCompletion(player)
-                }
-            }, mcConnection.eventLoop())
-        }, mcConnection.eventLoop()).exceptionally { ex ->
-            logger.error("Exception during connection of {}", finalProfile, ex)
-            null
+            return
         }
+
+        if (server.configuration.isLogPlayerConnections) {
+            logger.info("{} entered outpre pre-registration flow", player)
+        }
+
+        startTemporaryLoginPhase(player)
     }
 
-    private fun startLoginCompletion(player: ConnectedPlayer) {
+    private fun startTemporaryLoginPhase(player: ConnectedPlayer) {
         val threshold = server.configuration.compressionThreshold
         if (threshold >= 0 && mcConnection.protocolVersion.noLessThan(ProtocolVersion.MINECRAFT_1_8)) {
             mcConnection.write(SetCompressionPacket(threshold))
@@ -151,7 +128,20 @@ class OutPreAuthSessionHandler(
         }
 
         validateIdentifiedKey(player, playerUniqueId)
-        completeProxyLoginAndEnterOutPre(player, playerUniqueId)
+        mcConnection.setAssociation(player)
+
+        val success = ServerLoginSuccessPacket()
+        success.username = player.username
+        success.properties = player.gameProfileProperties
+        success.uuid = playerUniqueId
+        mcConnection.write(success)
+
+        loginState = State.SUCCESS_SENT
+        if (inbound.protocolVersion.lessThan(ProtocolVersion.MINECRAFT_1_20_2)) {
+            loginState = State.BRIDGING
+            mcConnection.setActiveSessionHandler(StateRegistry.PLAY, OutPreClientBridgeSessionHandler(player, outPre.createBridge(player), false))
+            outPre.beginInitialJoin(player, this)
+        }
     }
 
     private fun validateIdentifiedKey(player: ConnectedPlayer, playerUniqueId: UUID) {
@@ -179,47 +169,110 @@ class OutPreAuthSessionHandler(
         }
     }
 
-    private fun completeProxyLoginAndEnterOutPre(player: ConnectedPlayer, playerUniqueId: UUID) {
-        mcConnection.setAssociation(player)
+    fun completeAfterVerification(preferredTargetServerName: String?) {
+        if (loginState != State.BRIDGING) {
+            return
+        }
+        loginState = State.FINALIZING
 
-        server.eventManager.fire(LoginEvent(player, serverIdHash)).thenAcceptAsync({ event ->
+        val player = connectedPlayer ?: return
+        val hyperPlayer = HyperZonePlayerManager.getByPlayerOrNull(player) ?: run {
+            player.disconnect0(Component.text("OutPre finalization failed: missing HyperZonePlayer", NamedTextColor.RED), false)
+            return
+        }
+
+        val attachedProfile = runCatching {
+            hyperPlayer.getAttachedGameProfile()
+        }.getOrElse { throwable ->
+            logger.error("OutPre finalization failed for {}: attached profile unavailable", player, throwable)
+            player.disconnect0(Component.text("OutPre finalization failed: attached profile missing", NamedTextColor.RED), false)
+            return
+        }
+
+        ProfileLayerVerifyListener.allowOutPreFinalProfile(attachedProfile.id)
+        val finalProfileEvent = GameProfileRequestEvent(inbound, attachedProfile, onlineMode)
+        server.eventManager.fire(finalProfileEvent).thenComposeAsync({ profileEvent ->
             if (mcConnection.isClosed) {
-                server.eventManager.fireAndForget(
-                    DisconnectEvent(player, DisconnectEvent.LoginStatus.CANCELLED_BY_USER_BEFORE_COMPLETE)
-                )
-                return@thenAcceptAsync
+                return@thenComposeAsync CompletableFuture.completedFuture(null)
             }
 
-            val reason: Optional<Component> = event.result.reasonComponent
-            if (reason.isPresent) {
-                player.disconnect0(reason.get(), true)
-                return@thenAcceptAsync
-            }
+            profile = profileEvent.gameProfile
+            NettyReflectionHelper.setGameProfile(player, profile)
 
-            if (!server.registerConnection(player)) {
-                player.disconnect0(Component.translatable("velocity.error.already-connected-proxy"), true)
-                return@thenAcceptAsync
-            }
+            server.eventManager.fire(
+                PermissionsSetupEvent(player, NettyReflectionHelper.defaultPermissions())
+            ).thenComposeAsync({ event ->
+                if (mcConnection.isClosed) {
+                    return@thenComposeAsync CompletableFuture.completedFuture(null)
+                }
 
-            val success = ServerLoginSuccessPacket()
-            success.username = player.username
-            success.properties = player.gameProfileProperties
-            success.uuid = playerUniqueId
-            mcConnection.write(success)
+                val function: PermissionFunction? = event.createFunction(player)
+                if (function == null) {
+                    logger.error(
+                        "A plugin permission provider {} provided an invalid permission function for player {}. Falling back to the default permission function.",
+                        event.provider.javaClass.name,
+                        player.username,
+                    )
+                } else {
+                    NettyReflectionHelper.setPermissionFunction(player, function)
+                }
 
-            loginState = State.SUCCESS_SENT
-            if (inbound.protocolVersion.lessThan(ProtocolVersion.MINECRAFT_1_20_2)) {
-                loginState = State.ACKNOWLEDGED
-                mcConnection.setActiveSessionHandler(
-                    StateRegistry.PLAY,
-                    NettyReflectionHelper.createInitialConnectSessionHandler(player, server),
-                )
-                outPre.beginInitialJoin(player)
-            }
+                server.eventManager.fire(LoginEvent(player, serverIdHash)).thenAcceptAsync({ loginEvent ->
+                    if (mcConnection.isClosed) {
+                        server.eventManager.fireAndForget(
+                            DisconnectEvent(player, DisconnectEvent.LoginStatus.CANCELLED_BY_USER_BEFORE_COMPLETE),
+                        )
+                        return@thenAcceptAsync
+                    }
+
+                    val reason: Optional<Component> = loginEvent.result.reasonComponent
+                    if (reason.isPresent) {
+                        player.disconnect0(reason.get(), false)
+                        return@thenAcceptAsync
+                    }
+
+                    if (!server.registerConnection(player)) {
+                        player.disconnect0(Component.translatable("velocity.error.already-connected-proxy"), false)
+                        return@thenAcceptAsync
+                    }
+
+                    outPre.markInitialFlowReleased(player)
+                    loginState = State.RELEASED
+                    server.eventManager.fire(PostLoginEvent(player)).thenCompose {
+                        connectToReleasedTarget(player, preferredTargetServerName)
+                    }.exceptionally { ex ->
+                        logger.error("Exception while continuing outpre flow for {}", player, ex)
+                        null
+                    }
+                }, mcConnection.eventLoop())
+            }, mcConnection.eventLoop())
         }, mcConnection.eventLoop()).exceptionally { ex ->
-            logger.error("Exception while completing outpre login phase for {}", player, ex)
+            logger.error("Exception while finalizing outpre flow for {}", player, ex)
+            player.disconnect0(Component.text("OutPre finalization failed", NamedTextColor.RED), false)
             null
         }
+    }
+
+    private fun connectToReleasedTarget(player: ConnectedPlayer, preferredTargetServerName: String?): CompletableFuture<Void> {
+        val preferredTarget = outPre.resolveReleaseTarget(player, preferredTargetServerName)
+        if (preferredTarget != null) {
+            player.createConnectionRequest(preferredTarget).fireAndForget()
+            return CompletableFuture.completedFuture(null)
+        }
+
+        val initialFromConfig = player.nextServerToTry.orElse(null)
+        val event = PlayerChooseInitialServerEvent(player, initialFromConfig)
+        return server.eventManager.fire(event).thenRunAsync({
+            val toTry = event.initialServer.orElse(null)
+            if (toTry == null) {
+                player.disconnect0(
+                    Component.translatable("velocity.error.no-available-servers", NamedTextColor.RED),
+                    false,
+                )
+                return@thenRunAsync
+            }
+            player.createConnectionRequest(toTry).fireAndForget()
+        }, player.connection.eventLoop())
     }
 
     override fun handle(packet: LoginAcknowledgedPacket): Boolean {
@@ -228,21 +281,21 @@ class OutPreAuthSessionHandler(
             return true
         }
 
-        loginState = State.ACKNOWLEDGED
+        loginState = State.BRIDGING
         val player = connectedPlayer ?: return true
-        mcConnection.setActiveSessionHandler(StateRegistry.CONFIG, ClientConfigSessionHandler(server, player))
-        outPre.beginInitialJoin(player)
+        mcConnection.setActiveSessionHandler(StateRegistry.CONFIG, OutPreClientBridgeSessionHandler(player, outPre.createBridge(player), true))
+        outPre.beginInitialJoin(player, this)
         return true
     }
 
     override fun handle(packet: ServerboundCookieResponsePacket): Boolean {
         val player = connectedPlayer ?: return true
         server.eventManager.fire(
-            CookieReceiveEvent(player, packet.key, packet.payload)
+            CookieReceiveEvent(player, packet.key, packet.payload),
         ).thenAcceptAsync({ event ->
             if (event.result.isAllowed) {
                 throw IllegalStateException(
-                    "A cookie was requested by a proxy plugin in login phase but the response wasn't handled"
+                    "A cookie was requested by a proxy plugin in login phase but the response wasn't handled",
                 )
             }
         }, mcConnection.eventLoop())
@@ -255,6 +308,7 @@ class OutPreAuthSessionHandler(
     }
 
     override fun disconnected() {
+        loginState = State.CLOSED
         connectedPlayer?.reflectedTeardown()
         inbound.reflectedCleanup()
     }
@@ -262,8 +316,9 @@ class OutPreAuthSessionHandler(
     private enum class State {
         START,
         SUCCESS_SENT,
-        ACKNOWLEDGED,
+        BRIDGING,
+        FINALIZING,
+        RELEASED,
+        CLOSED,
     }
 }
-
-

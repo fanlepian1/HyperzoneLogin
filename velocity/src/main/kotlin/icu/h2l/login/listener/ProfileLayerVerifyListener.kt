@@ -32,12 +32,19 @@ import icu.h2l.login.HyperZoneLoginMain
 import icu.h2l.login.manager.HyperZonePlayerManager
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
+import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 class ProfileLayerVerifyListener {
     companion object {
         const val EXPECTED_NAME_PREFIX = RemapUtils.EXPECTED_NAME_PREFIX
         const val REMAP_PREFIX = RemapUtils.REMAP_PREFIX
         private const val PLUGIN_CONFLICT_MESSAGE = "登录失败：检测到插件冲突。"
+        private val allowedOutPreProfileIds = ConcurrentHashMap.newKeySet<UUID>()
+
+        fun allowOutPreFinalProfile(profileId: UUID) {
+            allowedOutPreProfileIds += profileId
+        }
     }
 
     // OpenPreLogin handling has been moved to the auth-offline module to centralize offline matching.
@@ -65,6 +72,11 @@ class ProfileLayerVerifyListener {
 
         val incomingProfile = event.gameProfile
         val incomingName = incomingProfile.name
+
+        if (allowedOutPreProfileIds.remove(incomingProfile.id)) {
+            return
+        }
+
         val verifyEvent = VerifyInitialGameProfileEvent(event.connection, incomingProfile)
         fun disconnectWithError(logMessage: String, userMessage: String) {
             HyperZoneLoginMain.getInstance().logger.error(logMessage)

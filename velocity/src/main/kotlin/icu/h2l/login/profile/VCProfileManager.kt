@@ -62,6 +62,21 @@ class VCProfileManager(
             return
         }
 
+        val proxyServer = HyperZoneLoginMain.getInstance().proxy as? VelocityServer
+            ?: run {
+                logger.warn("VCProfileManager 未拿到 VelocityServer，跳过 attach 后正式身份同步")
+                return
+            }
+
+        val isRegisteredInProxy = ReflectionAccess.connectionsByUuid(proxyServer).values.any { it === connectedPlayer }
+            || ReflectionAccess.connectionsByName(proxyServer).values.any { it === connectedPlayer }
+        if (!isRegisteredInProxy) {
+            logger.debug(
+                "VCProfileManager 检测到玩家尚未注册进 Velocity，跳过本次 attach 后正式身份同步: player=${connectedPlayer.username}, profileId=${attachedProfile.id}"
+            )
+            return
+        }
+
         val currentGameProfile = connectedPlayer.gameProfile
         val targetGameProfile = resolveRuntimeGameProfile(
             currentGameProfile = currentGameProfile,

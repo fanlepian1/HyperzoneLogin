@@ -46,6 +46,7 @@ import icu.h2l.login.HyperZoneLoginMain
 import icu.h2l.login.inject.network.ChatSessionUpdatePacketIdResolver
 import icu.h2l.login.manager.HyperZonePlayerManager
 import icu.h2l.login.player.ProfileSkinApplySupport
+import icu.h2l.login.vServer.outpre.OutPreBackendBridge
 import io.netty.buffer.ByteBuf
 import io.netty.channel.Channel
 import io.netty.channel.ChannelHandlerContext
@@ -63,9 +64,10 @@ class ToBackendPacketReplacer(
     }
 
     private lateinit var mcConnection: MinecraftConnection
-    private lateinit var velocityServerConnection: VelocityServerConnection
     private lateinit var player: ConnectedPlayer
     private lateinit var hyperPlayer: HyperZonePlayer
+    private lateinit var targetServerName: String
+    private lateinit var targetServerAddress: InetSocketAddress
 
     private lateinit var config: VelocityConfiguration
 
@@ -97,10 +99,9 @@ class ToBackendPacketReplacer(
             }
             return msg
         }
-//目前生产的内容基本一致，没有必要替换
-//        if (msg is HandshakePacket) {
-//            return genHandshake()
-//        }
+        if (msg is HandshakePacket && shouldRewriteHandshake()) {
+            return genHandshake()
+        }
         if (msg is ServerLoginPacket) {
             val forwarded = genServerLogin()
             return forwarded
@@ -135,8 +136,19 @@ class ToBackendPacketReplacer(
             return false
         }
 
-        val currentServerName = velocityServerConnection.server.serverInfo.name
-        return currentServerName.equals(loginServerName, ignoreCase = true)
+        return targetServerName.equals(loginServerName, ignoreCase = true)
+    }
+
+    private fun isOutPreAuthTarget(): Boolean {
+        if (!isLoginServerTarget()) {
+            return false
+        }
+
+        return HyperZoneLoginMain.getBackendServerConfig().vServerMode.trim().equals("outpre", ignoreCase = true)
+    }
+
+    private fun shouldRewriteHandshake(): Boolean {
+        return isOutPreAuthTarget()
     }
 
     private fun genLoginPluginResponse(
@@ -168,7 +180,7 @@ class ToBackendPacketReplacer(
     private fun resolveRequestedForwardingVersion(content: ByteBuf?): Int {
         if (content == null) {
             debug {
-                "[ProfileSkinFlow] modern forwarding version missing content, fallback=${PlayerDataForwarding.MODERN_DEFAULT}, target=${velocityServerConnection.server.serverInfo.name}"
+                "[ProfileSkinFlow] modern forwarding version missing content, fallback=${PlayerDataForwarding.MODERN_DEFAULT}, target=$targetServerName"
             }
             return PlayerDataForwarding.MODERN_DEFAULT
         }
@@ -176,7 +188,7 @@ class ToBackendPacketReplacer(
         val readableBytes = content.readableBytes()
         if (readableBytes <= MODERN_FORWARDING_SIGNATURE_LENGTH) {
             debug {
-                "[ProfileSkinFlow] modern forwarding version payload too short, fallback=${PlayerDataForwarding.MODERN_DEFAULT}, readableBytes=$readableBytes, target=${velocityServerConnection.server.serverInfo.name}"
+                "[ProfileSkinFlow] modern forwarding version payload too short, fallback=${PlayerDataForwarding.MODERN_DEFAULT}, readableBytes=$readableBytes, target=$targetServerName"
             }
             return PlayerDataForwarding.MODERN_DEFAULT
         }
@@ -187,7 +199,7 @@ class ToBackendPacketReplacer(
             ProtocolUtils.readVarInt(duplicate)
         }.onFailure { throwable ->
             debug {
-                "[ProfileSkinFlow] modern forwarding version decode failed, fallback=${PlayerDataForwarding.MODERN_DEFAULT}, readableBytes=$readableBytes, target=${velocityServerConnection.server.serverInfo.name}, reason=${throwable.message}"
+                "[ProfileSkinFlow] modern forwarding version decode failed, fallback=${PlayerDataForwarding.MODERN_DEFAULT}, readableBytes=$readableBytes, target=$targetServerName, reason=${throwable.message}"
             }
         }.getOrDefault(PlayerDataForwarding.MODERN_DEFAULT)
     }
@@ -195,16 +207,29 @@ class ToBackendPacketReplacer(
 
     private lateinit var fillAddr: InetSocketAddress
 
+    private fun resolvePresentedHostAndPort(): Pair<String, Int> {
+        val defaultAddress = player.virtualHost.orElseGet(Supplier { fillAddr })
+        if (!isOutPreAuthTarget()) {
+            return defaultAddress.hostString to defaultAddress.port
+        }
+
+        val cfg = HyperZoneLoginMain.getBackendServerConfig()
+        return when (cfg.outPreAddressMode.trim().lowercase()) {
+            "backend-address" -> fillAddr.hostString to fillAddr.port
+            "custom" -> {
+                val host = cfg.outPreAddressHost.trim().ifBlank { fillAddr.hostString }
+                val port = if (cfg.outPreAddressPort > 0) cfg.outPreAddressPort else fillAddr.port
+                host to port
+            }
+
+            else -> defaultAddress.hostString to defaultAddress.port
+        }
+    }
+
     private fun genHandshake(): HandshakePacket {
         val forwardingMode: PlayerInfoForwarding? = config.playerInfoForwardingMode
-//        val player = HyperZonePlayerManager.getByChannel(ctx.channel()).proxyPlayer!! as ConnectedPlayer
-
-
-        // Initiate the handshake.
         val protocolVersion: ProtocolVersion? = player.connection.protocolVersion
-        val playerVhost: String? = player.virtualHost
-            .orElseGet { fillAddr }
-            .hostString
+        val (playerVhost, playerPort) = resolvePresentedHostAndPort()
 
         val handshake = HandshakePacket()
         handshake.setIntent(HandshakeIntent.LOGIN)
@@ -223,25 +248,23 @@ class ToBackendPacketReplacer(
             handshake.serverAddress = playerVhost
         }
 
-        handshake.port = player.virtualHost
-            .orElseGet(Supplier { fillAddr })
-            .port
+        handshake.port = playerPort
         return handshake
     }
 
     private fun createLegacyForwardingAddress(): String {
+        val (host, _) = resolvePresentedHostAndPort()
         return createLegacyForwardingAddress(
-            player.virtualHost.orElseGet(Supplier { fillAddr })
-                .hostString,
+            host,
             getPlayerRemoteAddressAsString(),
             resolveForwardingGameProfile()
         )
     }
 
     private fun createBungeeGuardForwardingAddress(forwardingSecret: ByteArray): String {
+        val (host, _) = resolvePresentedHostAndPort()
         return createBungeeGuardForwardingAddress(
-            player.virtualHost.orElseGet(Supplier { fillAddr })
-                .hostString,
+            host,
             getPlayerRemoteAddressAsString(),
             resolveForwardingGameProfile(),
             forwardingSecret
@@ -260,12 +283,29 @@ class ToBackendPacketReplacer(
     }
 
     fun getPlayerRemoteAddressAsString(): String {
-        val addr: String = player.remoteAddress.address.hostAddress
+        val addr: String = resolvePresentedPlayerIp()
         val ipv6ScopeIdx = addr.indexOf('%')
         if (ipv6ScopeIdx == -1) {
             return addr
         } else {
             return addr.substring(0, ipv6ScopeIdx)
+        }
+    }
+
+    private fun resolvePresentedPlayerIp(): String {
+        if (!isOutPreAuthTarget()) {
+            return player.remoteAddress.address.hostAddress
+        }
+
+        val cfg = HyperZoneLoginMain.getBackendServerConfig()
+        return when (cfg.outPrePlayerIpMode.trim().lowercase()) {
+            "proxy" -> (mcConnection.channel.localAddress() as? InetSocketAddress)
+                ?.address
+                ?.hostAddress
+                ?: player.remoteAddress.address.hostAddress
+
+            "custom" -> cfg.outPrePlayerIpValue.trim().ifBlank { player.remoteAddress.address.hostAddress }
+            else -> player.remoteAddress.address.hostAddress
         }
     }
 
@@ -322,13 +362,26 @@ class ToBackendPacketReplacer(
         val conn = ctx.channel().pipeline().get(MinecraftConnection::class.java) ?: return
 
         this.mcConnection = conn
-        this.velocityServerConnection = conn.association as VelocityServerConnection
-        this.player = velocityServerConnection.player
+        when (val association = conn.association) {
+            is VelocityServerConnection -> {
+                this.player = association.player
+                this.targetServerName = association.server.serverInfo.name
+                this.targetServerAddress = association.server.serverInfo.address
+            }
 
-        this.fillAddr = velocityServerConnection.server.serverInfo.address
+            is OutPreBackendBridge -> {
+                this.player = association.player
+                this.targetServerName = association.targetServerName()
+                this.targetServerAddress = association.targetAddress()
+            }
+
+            else -> return
+        }
+
+        this.fillAddr = targetServerAddress
         this.hyperPlayer = HyperZonePlayerManager.getByPlayer(player)
         val server = HyperZoneLoginMain.getInstance().proxy
-        config = (server.configuration as VelocityConfiguration)
+        config = server.configuration as VelocityConfiguration
     }
 
 }

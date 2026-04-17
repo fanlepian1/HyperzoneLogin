@@ -28,6 +28,7 @@ import com.velocitypowered.api.proxy.crypto.IdentifiedKey
 import com.velocitypowered.api.util.GameProfile
 import com.velocitypowered.proxy.VelocityServer
 import com.velocitypowered.proxy.connection.MinecraftConnection
+import com.velocitypowered.proxy.connection.backend.VelocityServerConnection
 import com.velocitypowered.proxy.connection.client.AuthSessionHandler
 import com.velocitypowered.proxy.connection.client.ConnectedPlayer
 import com.velocitypowered.proxy.connection.client.InitialConnectSessionHandler
@@ -134,6 +135,14 @@ object NettyReflectionHelper {
         ).also { it.isAccessible = true }
     }
 
+    private val connectedPlayerConnectionInFlightField by lazy {
+        ConnectedPlayer::class.java.getDeclaredField("connectionInFlight").also { it.isAccessible = true }
+    }
+
+    private val connectedPlayerProfileField by lazy {
+        ConnectedPlayer::class.java.getDeclaredField("profile").also { it.isAccessible = true }
+    }
+
     private val `InitialConnectSessionHandler$init`: InitialConnectSessionHandlerConstructor by lazy {
         val ctor = InitialConnectSessionHandler::class.java.getDeclaredConstructor(
             ConnectedPlayer::class.java,
@@ -225,6 +234,30 @@ object NettyReflectionHelper {
         }.getOrElse { reflectionException ->
             HyperZoneLoginMain.getInstance().logger.error(
                 "反射设置 ConnectedPlayer 权限函数失败。",
+                reflectionException
+            )
+            throw reflectionException
+        }
+    }
+
+    fun setConnectionInFlight(player: ConnectedPlayer, serverConnection: VelocityServerConnection?) {
+        runCatching {
+            connectedPlayerConnectionInFlightField.set(player, serverConnection)
+        }.getOrElse { reflectionException ->
+            HyperZoneLoginMain.getInstance().logger.error(
+                "反射设置 ConnectedPlayer.connectionInFlight 失败。",
+                reflectionException
+            )
+            throw reflectionException
+        }
+    }
+
+    fun setGameProfile(player: ConnectedPlayer, profile: GameProfile) {
+        runCatching {
+            connectedPlayerProfileField.set(player, profile)
+        }.getOrElse { reflectionException ->
+            HyperZoneLoginMain.getInstance().logger.error(
+                "反射设置 ConnectedPlayer.profile 失败。",
                 reflectionException
             )
             throw reflectionException
