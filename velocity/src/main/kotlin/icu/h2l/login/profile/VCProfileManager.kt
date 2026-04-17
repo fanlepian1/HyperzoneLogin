@@ -70,13 +70,6 @@ class VCProfileManager(
 
         val isRegisteredInProxy = ReflectionAccess.connectionsByUuid(proxyServer).values.any { it === connectedPlayer }
             || ReflectionAccess.connectionsByName(proxyServer).values.any { it === connectedPlayer }
-        if (!isRegisteredInProxy) {
-            logger.debug(
-                "VCProfileManager 检测到玩家尚未注册进 Velocity，跳过本次 attach 后正式身份同步: player=${connectedPlayer.username}, profileId=${attachedProfile.id}"
-            )
-            return
-        }
-
         val currentGameProfile = connectedPlayer.gameProfile
         val targetGameProfile = resolveRuntimeGameProfile(
             currentGameProfile = currentGameProfile,
@@ -85,6 +78,18 @@ class VCProfileManager(
             enableUuidHotChange = HyperZoneLoginMain.getMiscConfig().enableUuidHotChange
         )
         if (currentGameProfile == targetGameProfile) {
+            return
+        }
+
+        if (!isRegisteredInProxy) {
+            runCatching {
+                applyPreRegistrationProfileSwap(connectedPlayer, targetGameProfile)
+            }.onFailure { throwable ->
+                logger.error(
+                    "VCProfileManager 为未注册的 ConnectedPlayer 应用 attach 后正式身份失败: player=${connectedPlayer.username}, profileId=${attachedProfile.id}, reason=${throwable.message}",
+                    throwable
+                )
+            }
             return
         }
 
@@ -124,6 +129,15 @@ class VCProfileManager(
                 replaceProfile = { ReflectionAccess.profileField.set(player, newGameProfile) },
                 rollbackProfile = { ReflectionAccess.profileField.set(player, oldGameProfile) }
             )
+        }
+    }
+
+    private fun applyPreRegistrationProfileSwap(
+        player: ConnectedPlayer,
+        newGameProfile: GameProfile,
+    ) {
+        executeOnPlayerEventLoop(player) {
+            ReflectionAccess.profileField.set(player, newGameProfile)
         }
     }
 

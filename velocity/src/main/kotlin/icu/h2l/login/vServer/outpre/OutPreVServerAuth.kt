@@ -298,6 +298,7 @@ class OutPreVServerAuth(
         state: OutPreState,
     ) {
         state.hasConnectedToAuthServerOnce = true
+        hyperPlayer.resumeMessageDelivery()
         server.eventManager.fire(VServerJoinEvent(player, hyperPlayer))
 
         if (state.verifiedExitPending) {

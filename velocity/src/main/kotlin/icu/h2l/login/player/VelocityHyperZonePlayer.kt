@@ -159,9 +159,11 @@ class VelocityHyperZonePlayer(
         }
 
         HyperZoneLoginMain.getInstance().profileService.attachVerifiedCredentialProfile(this)
+        isVerifiedState.set(true)
         if (!hasAttachedProfile()) {
             sendMessage(HyperZoneLoginMain.getInstance().messageService.render(this, MessageKeys.Player.VERIFIED_UNBOUND))
         }
+        tryLeaveWaiting()
     }
 
     internal fun runCoreAuthorizedOverVerify() {
@@ -219,9 +221,6 @@ class VelocityHyperZonePlayer(
     }
 
     internal fun onAttachedProfileAvailable() {
-        if (!isVerifiedState.compareAndSet(false, true)) {
-            return
-        }
         tryLeaveWaiting()
     }
 

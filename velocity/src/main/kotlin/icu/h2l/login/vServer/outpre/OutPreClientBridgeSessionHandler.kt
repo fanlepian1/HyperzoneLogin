@@ -22,7 +22,9 @@
 package icu.h2l.login.vServer.outpre
 
 import com.velocitypowered.api.network.ProtocolVersion
+import com.velocitypowered.proxy.VelocityServer
 import com.velocitypowered.proxy.connection.MinecraftSessionHandler
+import com.velocitypowered.proxy.connection.client.ClientConfigSessionHandler
 import com.velocitypowered.proxy.connection.client.ConnectedPlayer
 import com.velocitypowered.proxy.protocol.MinecraftPacket
 import com.velocitypowered.proxy.protocol.ProtocolUtils
@@ -46,6 +48,8 @@ import com.velocitypowered.proxy.protocol.packet.chat.session.UnsignedPlayerComm
 import com.velocitypowered.proxy.protocol.packet.config.CodeOfConductAcceptPacket
 import com.velocitypowered.proxy.protocol.packet.config.FinishedUpdatePacket
 import com.velocitypowered.proxy.protocol.packet.config.KnownPacksPacket
+import com.velocitypowered.proxy.protocol.packet.config.StartUpdatePacket
+import icu.h2l.login.inject.network.NettyReflectionHelper
 import icu.h2l.login.manager.HyperChatCommandManagerImpl
 import io.netty.buffer.ByteBuf
 import io.netty.buffer.Unpooled
@@ -72,6 +76,10 @@ class OutPreClientBridgeSessionHandler(
     private var waitingAreaCommandsSent = false
     @Volatile
     private var phaseCallbackRegistered = false
+    @Volatile
+    private var releaseToVelocityCallback: (() -> Unit)? = null
+    @Volatile
+    private var releaseToVelocityInProgress = false
 
     init {
         ensurePhaseCallback()
@@ -192,6 +200,31 @@ class OutPreClientBridgeSessionHandler(
                 waitingAreaCommandsSent = false
             }
             maybeSendWaitingAreaCommands(force)
+        }
+    }
+
+    fun releaseToVelocity(server: VelocityServer, onReleased: () -> Unit) {
+        player.connection.eventLoop().execute {
+            if (player.protocolVersion.lessThan(ProtocolVersion.MINECRAFT_1_20_2)) {
+                player.connection.setActiveSessionHandler(
+                    StateRegistry.PLAY,
+                    NettyReflectionHelper.createInitialConnectSessionHandler(player, server)
+                )
+                onReleased()
+                return@execute
+            }
+
+            releaseToVelocityInProgress = true
+            releaseToVelocityCallback = {
+                releaseToVelocityInProgress = false
+                player.connection.setActiveSessionHandler(
+                    StateRegistry.CONFIG,
+                    ClientConfigSessionHandler(server, player)
+                )
+                onReleased()
+            }
+            player.connection.write(StartUpdatePacket.INSTANCE)
+            player.connection.flush()
         }
     }
 
@@ -354,6 +387,13 @@ class OutPreClientBridgeSessionHandler(
     }
 
     override fun handle(packet: FinishedUpdatePacket): Boolean {
+        val releaseCallback = releaseToVelocityCallback
+        if (releaseCallback != null && releaseToVelocityInProgress && !configMode) {
+            releaseToVelocityCallback = null
+            releaseCallback()
+            return true
+        }
+
         if (configMode) {
             bridge.completeConfigurationFromClientAck()
             configMode = false

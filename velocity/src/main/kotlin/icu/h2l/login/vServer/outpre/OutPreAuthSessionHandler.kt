@@ -46,6 +46,7 @@ import com.velocitypowered.proxy.protocol.packet.LoginAcknowledgedPacket
 import com.velocitypowered.proxy.protocol.packet.ServerLoginSuccessPacket
 import com.velocitypowered.proxy.protocol.packet.ServerboundCookieResponsePacket
 import com.velocitypowered.proxy.protocol.packet.SetCompressionPacket
+import icu.h2l.login.HyperZoneLoginMain
 import icu.h2l.login.inject.network.NettyReflectionHelper
 import icu.h2l.login.inject.network.NettyReflectionHelper.reflectedCleanup
 import icu.h2l.login.inject.network.NettyReflectionHelper.reflectedDelegatedConnection
@@ -53,6 +54,7 @@ import icu.h2l.login.inject.network.NettyReflectionHelper.reflectedTeardown
 import icu.h2l.login.listener.ProfileLayerVerifyListener
 import icu.h2l.login.manager.HyperZonePlayerManager
 import io.netty.buffer.ByteBuf
+import icu.h2l.login.profile.resolveRuntimeGameProfile
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
 import org.apache.logging.log4j.LogManager
@@ -182,15 +184,23 @@ class OutPreAuthSessionHandler(
         }
 
         val attachedProfile = runCatching {
-            hyperPlayer.getAttachedGameProfile()
+            HyperZoneLoginMain.getInstance().profileService.getAttachedProfile(hyperPlayer)
+                ?: throw IllegalStateException("missing attached profile")
         }.getOrElse { throwable ->
             logger.error("OutPre finalization failed for {}: attached profile unavailable", player, throwable)
             player.disconnect0(Component.text("OutPre finalization failed: attached profile missing", NamedTextColor.RED), false)
             return
         }
 
-        ProfileLayerVerifyListener.allowOutPreFinalProfile(attachedProfile.id)
-        val finalProfileEvent = GameProfileRequestEvent(inbound, attachedProfile, onlineMode)
+        val finalCandidateProfile = resolveRuntimeGameProfile(
+            currentGameProfile = player.gameProfile,
+            attachedProfile = attachedProfile,
+            enableNameHotChange = HyperZoneLoginMain.getMiscConfig().enableNameHotChange,
+            enableUuidHotChange = HyperZoneLoginMain.getMiscConfig().enableUuidHotChange
+        )
+
+        ProfileLayerVerifyListener.allowOutPreFinalProfile(finalCandidateProfile.id)
+        val finalProfileEvent = GameProfileRequestEvent(inbound, finalCandidateProfile, onlineMode)
         server.eventManager.fire(finalProfileEvent).thenComposeAsync({ profileEvent ->
             if (mcConnection.isClosed) {
                 return@thenComposeAsync CompletableFuture.completedFuture(null)
@@ -236,14 +246,7 @@ class OutPreAuthSessionHandler(
                         return@thenAcceptAsync
                     }
 
-                    outPre.markInitialFlowReleased(player)
-                    loginState = State.RELEASED
-                    server.eventManager.fire(PostLoginEvent(player)).thenCompose {
-                        connectToReleasedTarget(player, preferredTargetServerName)
-                    }.exceptionally { ex ->
-                        logger.error("Exception while continuing outpre flow for {}", player, ex)
-                        null
-                    }
+                    continueReleasedFlow(player, preferredTargetServerName)
                 }, mcConnection.eventLoop())
             }, mcConnection.eventLoop())
         }, mcConnection.eventLoop()).exceptionally { ex ->
@@ -251,6 +254,32 @@ class OutPreAuthSessionHandler(
             player.disconnect0(Component.text("OutPre finalization failed", NamedTextColor.RED), false)
             null
         }
+    }
+
+    private fun continueReleasedFlow(player: ConnectedPlayer, preferredTargetServerName: String?) {
+        val releaseAction = {
+            loginState = State.RELEASED
+            server.eventManager.fire(PostLoginEvent(player)).thenCompose {
+                connectToReleasedTarget(player, preferredTargetServerName)
+            }.exceptionally { ex ->
+                logger.error("Exception while continuing outpre flow for {}", player, ex)
+                null
+            }
+            Unit
+        }
+
+        val clientHandler = mcConnection.activeSessionHandler as? OutPreClientBridgeSessionHandler
+        outPre.markInitialFlowReleased(player)
+        if (clientHandler == null) {
+            mcConnection.setActiveSessionHandler(
+                StateRegistry.PLAY,
+                NettyReflectionHelper.createInitialConnectSessionHandler(player, server)
+            )
+            releaseAction()
+            return
+        }
+
+        clientHandler.releaseToVelocity(server, releaseAction)
     }
 
     private fun connectToReleasedTarget(player: ConnectedPlayer, preferredTargetServerName: String?): CompletableFuture<Void> {
