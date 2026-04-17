@@ -29,9 +29,10 @@ import com.velocitypowered.proxy.network.Endpoint
 import icu.h2l.login.HyperZoneLoginMain
 import icu.h2l.login.inject.network.netty.NettyLoginSessionHandler
 import icu.h2l.login.inject.network.netty.SeverChannelAcceptAdapter
+import icu.h2l.login.inject.network.netty.replacer.ChatSessionKillerPacketReplacer
 import icu.h2l.login.inject.network.netty.replacer.ServerLoginSuccessPacketReplacer
-import icu.h2l.login.inject.network.netty.replacer.ToBackendPacketReplacer
 import icu.h2l.login.inject.network.netty.ViaChannelInitializer
+import icu.h2l.login.vServer.backend.compat.BackendLoginProfileRewritePacketReplacer
 import icu.h2l.login.vServer.backend.compat.BackendWaitingAreaPlayerInfoFilter
 import io.netty.channel.Channel
 import java.net.InetSocketAddress
@@ -94,8 +95,13 @@ class VelocityNetworkInjectorImpl(
 
             initializer.set(object : ViaChannelInitializer(old) {
                 override fun injectChannel(channel: Channel) {
-                    channel.pipeline().addLast("sl_r_rpl", ToBackendPacketReplacer(channel))
-                    if (HyperZoneLoginMain.getInstance().serverAdapter?.supportsBackendPlayerInfoFilter() == true) {
+                    if (HyperZoneLoginMain.getMiscConfig().killChatSession) {
+                        channel.pipeline().addLast("h2l_chat_session_killer", ChatSessionKillerPacketReplacer(channel))
+                    }
+                    if (HyperZoneLoginMain.getInstance().serverAdapter?.needsBackendLoginProfileRewrite() == true) {
+                        channel.pipeline().addLast("sl_r_rpl", BackendLoginProfileRewritePacketReplacer(channel))
+                    }
+                    if (HyperZoneLoginMain.getInstance().serverAdapter?.needsBackendPlayerInfoCompat() == true) {
                         channel.pipeline().addLast("h2l_waiting_upsert_filter", BackendWaitingAreaPlayerInfoFilter())
                     }
 //                    println("SVA: ${channel.pipeline().names()}")

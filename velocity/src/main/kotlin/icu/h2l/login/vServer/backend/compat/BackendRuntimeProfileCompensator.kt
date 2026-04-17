@@ -53,7 +53,7 @@ class BackendRuntimeProfileCompensator(
     fun onProfileAttached(event: ProfileAttachedEvent) {
         val main = HyperZoneLoginMain.getInstance()
         if (!HyperZoneLoginMain.getMiscConfig().enableReplaceGameProfile
-            || main.serverAdapter?.supportsBackendRuntimeProfileCompensation() != true
+            || main.serverAdapter?.needsBackendRuntimeProfileSync() != true
         ) {
             return
         }

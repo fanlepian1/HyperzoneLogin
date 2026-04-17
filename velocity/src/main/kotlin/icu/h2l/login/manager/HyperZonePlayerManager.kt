@@ -23,6 +23,7 @@ package icu.h2l.login.manager
 
 import com.velocitypowered.api.event.Subscribe
 import com.velocitypowered.api.event.connection.DisconnectEvent
+import icu.h2l.api.event.connection.OpenPreLoginEvent
 import com.velocitypowered.api.proxy.Player
 import icu.h2l.api.player.HyperZonePlayer
 import icu.h2l.api.player.HyperZonePlayerAccessor
@@ -36,6 +37,12 @@ import java.util.concurrent.ConcurrentHashMap
 
 object HyperZonePlayerManager : HyperZonePlayerAccessor {
     private val playersByPlayer = ConcurrentHashMap<Channel, VelocityHyperZonePlayer>()
+
+    @Subscribe(priority = Short.MIN_VALUE)
+    fun onPreLoginChannelInit(event: OpenPreLoginEvent) {
+        // Run last so other listeners can finish deciding the player's online/offline mode.
+        create(event.channel, event.userName, event.uuid, event.isOnline)
+    }
 
     override fun create(channel: Channel, userName: String, uuid: UUID, isOnline: Boolean): HyperZonePlayer {
         val createdPlayer = VelocityHyperZonePlayer(userName, uuid, isOnline)

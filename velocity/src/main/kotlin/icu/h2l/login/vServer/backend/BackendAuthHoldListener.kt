@@ -300,12 +300,20 @@ class BackendAuthHoldListener(
         return true
     }
 
-    override fun supportsBackendPlayerInfoFilter(): Boolean {
+    override fun needsBackendPlayerInfoCompat(): Boolean {
         return HyperZoneLoginMain.getBackendServerConfig().enableWaitingAreaPlayerInfoCompensation
     }
 
-    override fun supportsBackendRuntimeProfileCompensation(): Boolean {
+    override fun needsBackendLoginProfileRewrite(): Boolean {
+        return true
+    }
+
+    override fun needsBackendRuntimeProfileSync(): Boolean {
         return HyperZoneLoginMain.getBackendServerConfig().enableRuntimeProfileCompensation
+    }
+
+    override fun needsBackendInitialProfileCompat(): Boolean {
+        return true
     }
 
     override fun allowsProxyFallbackCommand(player: Player): Boolean {

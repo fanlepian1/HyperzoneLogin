@@ -53,7 +53,6 @@ import icu.h2l.login.vServer.backend.BackendAuthHoldListener
 import icu.h2l.login.vServer.outpre.OutPreVServerAuth
 import icu.h2l.login.vServer.command.ExitVServerCommand
 import icu.h2l.login.vServer.command.OverVServerCommand
-import icu.h2l.login.listener.ProfileLayerVerifyListener
 import icu.h2l.login.listener.PlayerAreaLifecycleListener
 import icu.h2l.login.manager.HyperChatCommandManagerImpl
 import icu.h2l.login.manager.HyperZonePlayerManager
@@ -65,6 +64,7 @@ import icu.h2l.login.module.EmbeddedModuleRegistry
 import icu.h2l.login.module.EmbeddedModuleSpec
 import icu.h2l.login.profile.ProfileBindingCodeService
 import icu.h2l.login.vServer.backend.compat.BackendRuntimeProfileCompensator
+import icu.h2l.login.vServer.backend.compat.BackendProfileLayerCompatListener
 import icu.h2l.login.profile.VelocityHyperZoneProfileService
 import icu.h2l.login.util.registerApiLogger
 import net.kyori.adventure.text.logger.slf4j.ComponentLogger
@@ -229,7 +229,9 @@ class HyperZoneLoginMain(
         val hzlCommand = HyperZoneLoginCommand(bindingCodeService).createCommand()
         val hzlCommandMeta = proxy.commandManager.metaBuilder(hzlCommand).build()
         proxy.commandManager.register(hzlCommandMeta, hzlCommand)
-        proxy.eventManager.register(plugin, ProfileLayerVerifyListener())
+        if (activeVServerAdapter?.needsBackendInitialProfileCompat() == true) {
+            proxy.eventManager.register(plugin, BackendProfileLayerCompatListener())
+        }
         proxy.eventManager.register(plugin, backendRuntimeProfileCompensator)
         proxy.eventManager.register(plugin, LoginRenameListener())
         proxy.eventManager.register(plugin, LoginReUuidListener())

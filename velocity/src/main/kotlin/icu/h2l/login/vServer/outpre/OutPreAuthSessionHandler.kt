@@ -51,7 +51,6 @@ import icu.h2l.login.inject.network.NettyReflectionHelper
 import icu.h2l.login.inject.network.NettyReflectionHelper.reflectedCleanup
 import icu.h2l.login.inject.network.NettyReflectionHelper.reflectedDelegatedConnection
 import icu.h2l.login.inject.network.NettyReflectionHelper.reflectedTeardown
-import icu.h2l.login.listener.ProfileLayerVerifyListener
 import icu.h2l.login.manager.HyperZonePlayerManager
 import icu.h2l.login.util.buildAttachedIdentityGameProfile
 import icu.h2l.login.util.setConnectedPlayerGameProfile
@@ -198,7 +197,6 @@ class OutPreAuthSessionHandler(
             attachedProfile = attachedProfile,
         )
 
-        ProfileLayerVerifyListener.allowOutPreFinalProfile(finalCandidateProfile.id)
         val finalProfileEvent = GameProfileRequestEvent(inbound, finalCandidateProfile, onlineMode)
         server.eventManager.fire(finalProfileEvent).thenComposeAsync({ profileEvent ->
             if (mcConnection.isClosed) {
