@@ -43,7 +43,7 @@ class PreLoginGuardListener(
 ) {
     @Subscribe(priority = Short.MAX_VALUE)
     fun onOpenPreLogin(event: OpenPreLoginEvent) {
-        if (!config.enable || !event.allow) {
+        if (!event.allow) {
             return
         }
 

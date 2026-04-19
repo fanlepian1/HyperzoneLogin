@@ -26,9 +26,6 @@ import org.spongepowered.configurate.objectmapping.meta.Comment
 
 @ConfigSerializable
 class SafeConfig {
-    // 启用防护
-    @Comment("config.safe.enable")
-    val enable = true
 
     // 全局连接频率限制
     @Comment("config.safe.global-rate-limit")

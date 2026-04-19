@@ -54,10 +54,6 @@ interface HyperZoneApi :
      */
     val databaseManager: HyperZoneDatabaseManager
 
-    /**
-     * 当前是否启用了正式 [com.velocitypowered.api.util.GameProfile] 替换链路。
-     */
-    val isGameProfileReplacementEnabled: Boolean
 
     /**
      * 注册一个子模块到当前核心运行时。

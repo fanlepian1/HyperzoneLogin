@@ -26,9 +26,6 @@ import org.spongepowered.configurate.objectmapping.meta.Comment
 
 @ConfigSerializable
 class ProfileSkinConfig {
-    // 启用本模块
-    @Comment("config.skin.enabled")
-    var enabled: Boolean = true
 
     // 优先缓存并已携带签名的材质
     @Comment("config.skin.prefer-upstream-signed")

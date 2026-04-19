@@ -159,7 +159,6 @@ class ProfileSkinService(
 
     @Subscribe
     fun onPreprocess(event: ProfileSkinPreprocessEvent) {
-        if (!config.enabled) return
 
         notifyProcessingStarted(event.hyperZonePlayer)
 
@@ -273,7 +272,6 @@ class ProfileSkinService(
 
     @Subscribe
     fun onProfileAttached(event: ProfileAttachedEvent) {
-        if (!config.enabled) return
 
         val skinId = pendingSkinBindings.remove(event.hyperZonePlayer) ?: return
         if (profileRepository.bindProfile(event.profile.id, skinId)) {
@@ -301,7 +299,6 @@ class ProfileSkinService(
 
     @Subscribe
     fun onApply(event: ProfileSkinApplyEvent) {
-        if (!config.enabled) return
 
         val profileId = profileService.getAttachedProfile(event.hyperZonePlayer)?.id ?: run {
             debug(HyperZoneDebugType.PROFILE_SKIN) {
@@ -319,7 +316,6 @@ class ProfileSkinService(
 
     @Subscribe
     fun onServerLoginSuccess(event: ServerLoginSuccessEvent) {
-        if (!config.enabled) return
 
         event.rewritePacket = true
         event.uuid = event.hyperZonePlayer.clientOriginalUUID

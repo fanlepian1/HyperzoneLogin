@@ -29,13 +29,13 @@ import com.velocitypowered.api.util.GameProfile
 import com.velocitypowered.proxy.connection.client.ConnectedPlayer
 import com.velocitypowered.proxy.protocol.packet.LegacyPlayerListItemPacket
 import com.velocitypowered.proxy.protocol.packet.UpsertPlayerInfoPacket
-import icu.h2l.api.HyperZoneApi
 import icu.h2l.api.event.profile.ProfileSkinPreprocessEvent
 import icu.h2l.api.log.HyperZoneDebugType
 import icu.h2l.api.log.debug
 import icu.h2l.api.log.error
 import icu.h2l.api.log.warn
 import icu.h2l.api.player.HyperZonePlayer
+import icu.h2l.api.player.HyperZonePlayerAccessor
 import icu.h2l.api.profile.HyperZoneProfileService
 import icu.h2l.api.profile.skin.ProfileSkinTextures
 import icu.h2l.login.profile.skin.config.ProfileSkinConfig
@@ -52,7 +52,7 @@ private class SelfSkinReplayState {
 }
 
 class ProfileSkinSelfReplayService(
-    private val api: HyperZoneApi,
+    private val playerAccessor: HyperZonePlayerAccessor,
     private val config: ProfileSkinConfig,
     private val cacheRepository: ProfileSkinCacheRepository,
     private val profileRepository: ProfileSkinProfileRepository,
@@ -62,8 +62,6 @@ class ProfileSkinSelfReplayService(
 
     @Subscribe(priority = (Short.MIN_VALUE + 1).toShort())
     fun onProfileSkinPreprocess(event: ProfileSkinPreprocessEvent) {
-        if (!shouldHandleSelfReplay()) return
-
         /**
          * 这里的职责仅限于“保存第一次拿到的上游材质”。
          *
@@ -83,8 +81,6 @@ class ProfileSkinSelfReplayService(
 
     @Subscribe(priority = Short.MIN_VALUE)
     fun onProfileSkinPreprocessInitialSend(event: ProfileSkinPreprocessEvent) {
-        if (!shouldHandleSelfReplay()) return
-
         val state = replayStates[event.hyperZonePlayer] ?: return
         val textures = state.latestTextures.get()?.takeIf(::canReplayTextures) ?: return
         if (state.selfAddPlayerSent.get()) {
@@ -104,10 +100,8 @@ class ProfileSkinSelfReplayService(
 
     @Subscribe
     fun onPlayerFinishConfiguration(event: PlayerFinishConfigurationEvent) {
-        if (!shouldHandleSelfReplay()) return
-
         val hyperZonePlayer = runCatching {
-            api.hyperZonePlayers.getByPlayer(event.player())
+            playerAccessor.getByPlayer(event.player())
         }.getOrNull() ?: return
         val state = stateFor(hyperZonePlayer)
         val textures = resolveReplayTextures(
@@ -130,15 +124,12 @@ class ProfileSkinSelfReplayService(
     @Subscribe
     fun onDisconnect(event: DisconnectEvent) {
         runCatching {
-            api.hyperZonePlayers.getByPlayer(event.player)
+            playerAccessor.getByPlayer(event.player)
         }.getOrNull()?.let {
             replayStates.remove(it)
         }
     }
 
-    private fun shouldHandleSelfReplay(): Boolean {
-        return config.enabled && api.isGameProfileReplacementEnabled
-    }
 
     private fun stateFor(hyperZonePlayer: HyperZonePlayer): SelfSkinReplayState {
         return replayStates.computeIfAbsent(hyperZonePlayer) { SelfSkinReplayState() }

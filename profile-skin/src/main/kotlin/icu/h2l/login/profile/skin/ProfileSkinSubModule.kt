@@ -66,7 +66,7 @@ class ProfileSkinSubModule : HyperSubModule {
             api.hyperZonePlayers
         )
         selfReplayService = ProfileSkinSelfReplayService(
-            api,
+            api.hyperZonePlayers,
             config,
             cacheRepository,
             profileRepository,
