@@ -41,7 +41,7 @@ class OfflineAuthConfig {
     @Comment("会话自动登录")
     val session = SessionConfig()
 
-    @Comment("是否透传标准离线 UUID")
+    @Comment("透传离线 UUID")
     var passOfflineUuidToProfileResolve: Boolean = true
 
     @Comment("TOTP 二步验证")
@@ -55,22 +55,22 @@ class OfflineAuthConfig {
         @Comment("最长密码长度")
         val maxLength = 64
 
-        @Comment("是否禁止密码中包含用户名")
+        @Comment("禁止密码含用户名")
         val denyNameInPassword = true
     }
 
     @ConfigSerializable
     class LoginProtection {
-        @Comment("连续输错多少次后临时锁定登录")
+        @Comment("输错多少次锁定登录")
         val maxAttempts = 5
 
-        @Comment("触发锁定后的冷却秒数")
+        @Comment("锁定冷却时间（秒）")
         val blockSeconds = 300
     }
 
     @ConfigSerializable
     class EmailConfig {
-        @Comment("是否启用邮箱相关命令")
+        @Comment("启用邮箱命令")
         val enabled = true
 
         @Comment("恢复码投递模式：LOG 或 SMTP")
@@ -82,7 +82,7 @@ class OfflineAuthConfig {
         @Comment("恢复码有效期（分钟）")
         val recoveryCodeExpireMinutes = 15
 
-        @Comment("重复请求恢复邮件冷却（秒）")
+        @Comment("请求恢复邮件冷却（秒）")
         val recoveryCooldownSeconds = 120
 
         @Comment("单个恢复码允许输错次数")
@@ -98,7 +98,7 @@ class OfflineAuthConfig {
 
     @ConfigSerializable
     class SmtpConfig {
-        @Comment("邮件里显示的服务器名称")
+        @Comment("邮件显示的服务器名称")
         val serverName = "HyperZoneLogin"
 
         @Comment("SMTP 服务器地址")
@@ -149,37 +149,37 @@ class OfflineAuthConfig {
 
     @ConfigSerializable
     class PromptConfig {
-        @Comment("首次进入认证阶段时是否额外展示邮箱找回提示")
+        @Comment("首次进入邮箱找回提示")
         val showRecoveryHint = true
     }
 
     @ConfigSerializable
     class SessionConfig {
-        @Comment("是否启用短期会话自动登录")
+        @Comment("短期会话自动登录")
         val enabled = false
 
         @Comment("会话有效期（分钟）")
         val expireMinutes = 30
 
-        @Comment("是否把会话与玩家 IP 绑定")
+        @Comment("会话与玩家 IP 绑定")
         val bindIp = true
 
-        @Comment("注册成功后是否立刻签发会话")
+        @Comment("注册成功后立刻签发会话")
         val issueOnRegister = true
     }
 
     @ConfigSerializable
     class TotpConfig {
-        @Comment("是否启用 TOTP 二步验证功能")
+        @Comment("启用 TOTP（二步验证功能）")
         val enabled = true
 
-        @Comment("在验证器 App 中显示的发行方名称")
+        @Comment("在验证器 App 中显示的名称")
         val issuer = "HyperZoneLogin"
 
         @Comment("待确认 TOTP 密钥的有效期（分钟）")
         val pendingExpireMinutes = 10
 
-        @Comment("当账号启用 TOTP 时，是否允许 short session 直接绕过二次验证")
+        @Comment("允许 短期会话 跳过二次验证")
         val allowSessionBypass = false
     }
 }

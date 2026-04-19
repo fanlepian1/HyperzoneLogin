@@ -26,16 +26,16 @@ import org.spongepowered.configurate.objectmapping.meta.Comment
 
 @ConfigSerializable
 class ProfileSkinConfig {
-    @Comment("是否启用 profile-skin 模块")
+    @Comment("启用本模块")
     var enabled: Boolean = true
 
-    @Comment("是否优先缓存并使用上游已经携带签名的 textures")
+    @Comment("优先缓存并已携带签名的材质")
     var preferUpstreamSignedTextures: Boolean = true
 
-    @Comment("仅这些 entryId 的 signed textures 会被直接信任，其他 entry 即使 signed 也会优先尝试修复")
+    @Comment("不修复的入口ID")
     var trustedSignedTextureEntries: Set<String> = setOf("mojang")
 
-    @Comment("当上游 textures 没有签名时，是否尝试通过 MineSkin 修复")
+    @Comment("修复非官方签名")
     var restoreUnsignedTextures: Boolean = true
 
 
@@ -48,7 +48,7 @@ class MineSkinConfig {
     @Comment("生成方式：URL 或 UPLOAD")
     var method: String = "URL"
 
-    @Comment("当 URL 模式返回 remote fetch 类错误（例如 invalid_image / file size undefined）时，是否自动改用上传模式重试")
+    @Comment("出错时改模式重试")
     var retryUploadOnUrlReadFailure: Boolean = true
 
     @Comment("URL 模式接口地址")

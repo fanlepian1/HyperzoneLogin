@@ -50,22 +50,22 @@ data class DebugConfig(
 @Suppress("ANNOTATION_WILL_BE_APPLIED_ALSO_TO_PROPERTY_OR_FIELD")
 @ConfigSerializable
 data class DebugLogConfig(
-    @Comment("开启通用 debug 日志；仅建议用于未细分类型的临时排障")
+    @Comment("通用 debug 日志")
     val general: Boolean = false,
 
-    @Comment("开启 Floodgate / OutPre 预登录链路追踪日志")
+    @Comment("Floodgate / OutPre 预登录链路追踪日志")
     val outPreTrace: Boolean = false,
 
-    @Comment("开启 ProfileSkin 相关调试日志")
+    @Comment("ProfileSkin 相关调试日志")
     val profileSkin: Boolean = false,
 
-    @Comment("开启后端等待区兼容链路调试日志")
+    @Comment("后端等待区兼容链路调试日志")
     val backendCompat: Boolean = false,
 
-    @Comment("开启 Netty / GameProfile 重写链路调试日志")
+    @Comment("Netty / GameProfile 重写链路调试日志")
     val networkRewrite: Boolean = false,
 
-    @Comment("开启 Yggdrasil 认证链路调试日志")
+    @Comment("Yggdrasil 认证链路调试日志")
     val yggdrasilAuth: Boolean = false,
 )
 

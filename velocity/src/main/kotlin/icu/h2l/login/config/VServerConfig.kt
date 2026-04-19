@@ -28,13 +28,13 @@ import java.net.InetSocketAddress
 @Suppress("ANNOTATION_WILL_BE_APPLIED_ALSO_TO_PROPERTY_OR_FIELD")
 @ConfigSerializable
 data class VServerConfig(
-    @Comment("登录服实现模式：backend 或 outpre。强烈推荐 outpre 模式，因为它可以提供更干净的登录认证环境并分离认证服。")
+    @Comment("登录服实现模式：backend 或 outpre。推荐 outpre 模式，若有问题请使用backend模式。")
     val mode: String = "outpre",
 
-    @Comment("当指定了认证完成后默认进入的子服务器时（留空表示不指定固定目标，由Velocity本身的回退队列决定）：")
+    @Comment("认证完成后默认进入的服务器")
     val postAuthDefaultServer: String = "play",
 
-    @Comment("在认证阶段，如果玩家尝试前往其他服务器，是否记住该目标并在认证成功后优先前往")
+    @Comment("记住认证时收到的服务器跳转请求")
     val rememberRequestedServerDuringAuth: Boolean = true,
 
     val backend: BackendConfig = BackendConfig(),
@@ -44,13 +44,13 @@ data class VServerConfig(
     @Suppress("ANNOTATION_WILL_BE_APPLIED_ALSO_TO_PROPERTY_OR_FIELD")
     @ConfigSerializable
     data class BackendConfig(
-        @Comment("使用的真实认证等待服 Velocity 服务器名；留空表示禁用 backend 模式等待服")
+        @Comment("使用的真实认证等待服 Velocity 服务器名")
         val fallbackAuthServer: String = "lobby",
 
-        @Comment("是否启用等待区 UpsertPlayerInfo/TabList 兼容过滤补偿；outpre 不依赖该补偿")
+        @Comment("等待区 UpsertPlayerInfo/TabList 兼容过滤补偿")
         val enablePlayerInfoCompensation: Boolean = true,
 
-        @Comment("是否启用 attach 后的在线 GameProfile 补偿同步；outpre 在交付给 Velocity 前自行完成无缝 Profile 挂载")
+        @Comment("档案补偿同步")
         val enableProfileCompensation: Boolean = true
     )
 
@@ -58,15 +58,15 @@ data class VServerConfig(
     @ConfigSerializable
     data class OutpreConfig(
         @Comment(
-            """outpre 认证服的逻辑名，仅用于日志/状态标识；不需要在 Velocity 的 servers 中注册。
-如果使用 ViaVersion，你需要在 Velocity 的 servers 中添加注册条目，如 outpre-auth = "127.0.0.1:30066"，但绝对不需要将其配置为 try 队列。"""
+            """认证服的逻辑名，仅用于日志/状态标识；不需要在 Velocity 的 servers 中注册。
+如果使用 ViaVersion，你需要在 Velocity 的 servers 中添加注册条目，如 outpre-auth = "127.0.0.1:30066"，但不需要将其配置到 try 队列。"""
         )
         val authLabel: String = "outpre-auth",
 
-        @Comment("outpre 认证服的直连 Host；留空表示禁用 outpre")
+        @Comment("认证服的直连 Host")
         val authHost: String = "127.0.0.1",
 
-        @Comment("outpre 认证服的直连 Port")
+        @Comment("认证服的直连 Port")
         val authPort: Int = 30066,
 
         @Comment("转接给认证服时，在连接握手中对后端暴露的 Host；留空时使用 authHost")

@@ -56,13 +56,13 @@ class DatabaseSourceConfig {
 
     @ConfigSerializable
     class MySQLConfig {
-        @Comment("MySQL 服务器地址")
+        @Comment("地址")
         val host: String = "localhost"
 
-        @Comment("MySQL 服务器端口")
+        @Comment("端口")
         val port: Int = 3306
 
-        @Comment("数据库名称")
+        @Comment("库名")
         val database: String = "hyperzone_login"
 
         @Comment("用户名")
@@ -80,13 +80,13 @@ class DatabaseSourceConfig {
 
     @ConfigSerializable
     class MariaDBConfig {
-        @Comment("MariaDB 服务器地址")
+        @Comment("地址")
         val host: String = "localhost"
 
-        @Comment("MariaDB 服务器端口")
+        @Comment("端口")
         val port: Int = 3306
 
-        @Comment("数据库名称")
+        @Comment("库名")
         val database: String = "hyperzone_login"
 
         @Comment("用户名")
@@ -105,10 +105,10 @@ class DatabaseSourceConfig {
 
     @ConfigSerializable
     class PoolConfig {
-        @Comment("连接池最大连接数")
+        @Comment("最大连接数")
         val maximumPoolSize: Int = 10
 
-        @Comment("连接池最小空闲连接数")
+        @Comment("最小空闲连接数")
         val minimumIdle: Int = 2
 
         @Comment("连接超时时间（毫秒）")

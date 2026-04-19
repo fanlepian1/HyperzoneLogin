@@ -26,7 +26,7 @@ import org.spongepowered.configurate.objectmapping.meta.Comment
 
 @ConfigSerializable
 class SafeConfig {
-    @Comment("是否启用入口层防护")
+    @Comment("启用防护")
     val enable = true
 
     @Comment("全局连接频率限制")
@@ -63,16 +63,16 @@ class SafeConfig {
 
     @ConfigSerializable
     class UsernameConfig {
-        @Comment("是否启用用户名基础校验")
+        @Comment("用户名基础校验")
         val enable = true
 
-        @Comment("最短用户名长度")
+        @Comment("最短长度")
         val minLength = 3
 
-        @Comment("最长用户名长度")
+        @Comment("最长长度")
         val maxLength = 16
 
-        @Comment("是否要求用户名不能包含首尾空白")
+        @Comment("用户名不包含首尾空白")
         val denyLeadingOrTrailingWhitespace = true
 
         @Comment("允许的用户名正则，默认与 Minecraft 传统用户名规则一致")
@@ -81,7 +81,7 @@ class SafeConfig {
 
     @ConfigSerializable
     class IpCooldownConfig {
-        @Comment("是否启用同 IP 临时冷却")
+        @Comment("同 IP 临时冷却")
         val enabled = true
 
         @Comment("在统计窗口内触发多少次限流后，开始临时封禁")
@@ -96,30 +96,30 @@ class SafeConfig {
 
     @ConfigSerializable
     class StrictModeConfig {
-        @Comment("是否启用自动高峰防护模式")
+        @Comment("自动高峰防护模式")
         val enabled = true
 
-        @Comment("全局连接请求在窗口内达到该次数后进入 strict mode")
+        @Comment("全局连接请求在窗口内达到多少次后进入 严格模式")
         val triggerAttempts = 120
 
-        @Comment("strict mode 触发统计窗口（秒）")
+        @Comment("统计窗口（秒）")
         val windowSeconds = 15
 
-        @Comment("进入 strict mode 后，至少保持这么多秒")
+        @Comment("保持时长（秒）")
         val recoverAfterSeconds = 90
 
-        @Comment("strict mode 下的全局限流")
+        @Comment("全局限流")
         @JvmField
         val globalRateLimit = RateLimitConfig(maxAttempts = 30, windowSeconds = 10)
 
-        @Comment("strict mode 下的同 IP 限流")
+        @Comment("同 IP 限流")
         @JvmField
         val ipRateLimit = RateLimitConfig(maxAttempts = 4, windowSeconds = 10)
     }
 
     @ConfigSerializable
     class AuthFailureConfig {
-        @Comment("是否启用统一认证失败联动")
+        @Comment("统一认证失败联动")
         val enabled = true
 
         @Comment("同一 IP 在统计窗口内累计多少次认证失败后开始冷却")

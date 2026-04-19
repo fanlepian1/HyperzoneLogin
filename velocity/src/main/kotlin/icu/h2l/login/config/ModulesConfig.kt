@@ -26,22 +26,22 @@ import org.spongepowered.configurate.objectmapping.meta.Comment
 
 @ConfigSerializable
 class ModulesConfig {
-    @Comment("是否启用内置 Floodgate 识别模块；仅在已安装 floodgate 时生效，若同时安装 hzl-auth-floodgate 外部插件，则自动跳过内置版本")
+    @Comment("Floodgate 认证；仅在已安装 floodgate 时生效")
     val authFloodgate: Boolean = true
 
-    @Comment("是否启用内置离线认证模块；若同时安装 hzl-auth-offline 外部插件，则自动跳过内置版本")
+    @Comment("离线认证")
     val authOffline: Boolean = true
 
-    @Comment("是否启用内置 Yggdrasil 认证模块；若同时安装 hzl-auth-yggd 外部插件，则自动跳过内置版本")
+    @Comment("Yggdrasil 认证")
     val authYggd: Boolean = true
 
-    @Comment("是否启用内置安全防护模块；若同时安装 hzl-safe 外部插件，则自动跳过内置版本")
+    @Comment("安全防护")
     val safe: Boolean = true
 
-    @Comment("是否启用内置皮肤缓存模块；若同时安装 hzl-profile-skin 外部插件，则自动跳过内置版本")
+    @Comment("皮肤缓存")
     val profileSkin: Boolean = true
 
-    @Comment("是否启用内置数据迁移模块；默认关闭，按需开启。若同时安装 hzl-data-merge 外部插件，则自动跳过内置版本")
+    @Comment("数据迁移")
     val dataMerge: Boolean = false
 }
 

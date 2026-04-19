@@ -32,7 +32,7 @@ class MessagesConfig {
     @Comment("消息缺失时的回退语言；建议始终保留 en_us 或 zh_cn 之一")
     val fallbackLocale: String = "en_us"
 
-    @Comment("是否优先尝试读取客户端语言（如 en_us / zh_cn / ru_ru）；若失败则回退 defaultLocale")
+    @Comment("优先尝试读取客户端语言")
     val useClientLocale: Boolean = true
 }
 

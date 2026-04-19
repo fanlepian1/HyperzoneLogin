@@ -26,6 +26,6 @@ import org.spongepowered.configurate.objectmapping.meta.Comment
 
 @ConfigSerializable
 class RemapConfig {
-    @Comment("生成UUID时的前缀，如果是OfflinePlayer则为离线生成方式")
+    @Comment("未开启对应渠道UUID透传时的生成前缀，如果填OfflinePlayer则为行业标准离线生成法")
     val prefix = "HyperZone"
 }

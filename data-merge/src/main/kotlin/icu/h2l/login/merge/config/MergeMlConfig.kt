@@ -26,20 +26,20 @@ import org.spongepowered.configurate.objectmapping.meta.Comment
 
 @ConfigSerializable
 class MergeMlConfig {
-    @Comment("源数据库配置")
+    @Comment("数据库配置")
     var source: SourceConfig = SourceConfig()
 
-    @Comment("源表名配置")
+    @Comment("表名配置")
     var tables: SourceTables = SourceTables()
 
-    @Comment("service_id 到 entryId 的映射，未配置时默认使用 ml_{serviceId}")
+    @Comment("MultiLogin服务ID 到 HZL入口ID 映射，未配置时默认使用 ml_{服务ID}")
     var serviceIdMapping: MutableMap<Int, String> = mutableMapOf(
         1 to "mojang"
     )
 
     @ConfigSerializable
     class SourceConfig {
-        @Comment("源库类型，支持 H2DB 或 MYSQL")
+        @Comment("库类型，支持 H2DB 或 MYSQL")
         var type: String = "H2DB"
 
         @Comment("H2 配置")
@@ -54,28 +54,28 @@ class MergeMlConfig {
         @Comment("可选：直接指定 JDBC URL。留空时按 path + parameters 生成")
         var jdbcUrl: String = ""
 
-        @Comment("H2 文件路径（相对于插件数据目录）")
+        @Comment("文件路径（相对于插件数据目录）")
         var path: String = "data-merge/multilogin"
 
-        @Comment("H2 JDBC 附加参数")
+        @Comment("JDBC 附加参数")
         var parameters: String = "MODE=MySQL"
 
-        @Comment("H2 用户名")
+        @Comment("用户名")
         var username: String = "root"
 
-        @Comment("H2 密码")
+        @Comment("密码")
         var password: String = "root"
     }
 
     @ConfigSerializable
     class MysqlConfig {
-        @Comment("MySQL 地址")
+        @Comment("地址")
         var host: String = "127.0.0.1"
 
-        @Comment("MySQL 端口")
+        @Comment("端口")
         var port: Int = 3306
 
-        @Comment("数据库名")
+        @Comment("库名")
         var database: String = "mixed_login"
 
         @Comment("用户名")
@@ -84,16 +84,16 @@ class MergeMlConfig {
         @Comment("密码")
         var password: String = "password"
 
-        @Comment("JDBC 参数")
+        @Comment("JDBC 附加参数")
         var parameters: String = "useSSL=false&serverTimezone=UTC&characterEncoding=utf8"
     }
 
     @ConfigSerializable
     class SourceTables {
-        @Comment("旧库 UserDataTableV3 的表名")
+        @Comment("UserDataTableV3 的表名")
         var userDataTable: String = "multilogin_user_data_v3"
 
-        @Comment("旧库 InGameProfileTableV3 的表名")
+        @Comment("InGameProfileTableV3 的表名")
         var inGameProfileTable: String = "multilogin_in_game_profile_v3"
     }
 }

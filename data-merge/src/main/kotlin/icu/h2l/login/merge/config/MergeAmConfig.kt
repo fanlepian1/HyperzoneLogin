@@ -26,15 +26,15 @@ import org.spongepowered.configurate.objectmapping.meta.Comment
 
 @ConfigSerializable
 class MergeAmConfig {
-    @Comment("源数据库配置")
+    @Comment("数据库配置")
     var source: SourceConfig = SourceConfig()
 
-    @Comment("源表配置")
+    @Comment("表配置")
     var tables: SourceTables = SourceTables()
 
     @ConfigSerializable
     class SourceConfig {
-        @Comment("源库类型，支持 SQLITE 或 MYSQL")
+        @Comment("库类型，支持 SQLITE 或 MYSQL")
         var type: String = "SQLITE"
 
         @Comment("SQLite 配置")
@@ -52,19 +52,19 @@ class MergeAmConfig {
         @Comment("SQLite 文件路径（相对于插件数据目录）")
         var path: String = "data-merge/authme.db"
 
-        @Comment("SQLite JDBC 附加参数")
+        @Comment("可选：JDBC 附加参数")
         var parameters: String = ""
     }
 
     @ConfigSerializable
     class MysqlConfig {
-        @Comment("MySQL 地址")
+        @Comment("地址")
         var host: String = "127.0.0.1"
 
-        @Comment("MySQL 端口")
+        @Comment("端口")
         var port: Int = 3306
 
-        @Comment("数据库名")
+        @Comment("库名")
         var database: String = "authme"
 
         @Comment("用户名")
@@ -73,13 +73,13 @@ class MergeAmConfig {
         @Comment("密码")
         var password: String = "password"
 
-        @Comment("JDBC 参数")
+        @Comment("可选：JDBC 附加参数")
         var parameters: String = "useSSL=false&serverTimezone=UTC&characterEncoding=utf8"
     }
 
     @ConfigSerializable
     class SourceTables {
-        @Comment("AuthMe 数据表名")
+        @Comment("表名")
         var authMeTable: String = "authme"
     }
 }
