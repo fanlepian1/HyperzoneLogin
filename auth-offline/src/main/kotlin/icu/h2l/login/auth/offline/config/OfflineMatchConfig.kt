@@ -27,36 +27,45 @@ import org.spongepowered.configurate.objectmapping.meta.Comment
 @ConfigSerializable
 class OfflineMatchConfig {
 
-    @Comment("是否允许进行匹配")
+    // 是否允许进行匹配
+    @Comment("config.offline.match.enable")
     val enable = true
 
-    @Comment("UUID匹配设定")
+    // UUID匹配设定
+    @Comment("config.offline.match.uuid")
     val uuidMatch = UUIDMatch()
 
-    @Comment("Host匹配设定")
+    // Host匹配设定
+    @Comment("config.offline.match.host")
     val hostMatch = HostMatch()
 
     @ConfigSerializable
     class UUIDMatch {
         @ConfigSerializable
         class PCL2 {
-            @Comment("PCL2的UUID匹配")
+            // PCL2的UUID匹配
+            @Comment("config.offline.match.pcl2.enable")
             val enable = true
 
-            @Comment("PCL2的UUID进行哈希计算匹配")
+            // PCL2的UUID进行哈希计算匹配
+            @Comment("config.offline.match.pcl2.hash")
             val hash = true
 
-            @Comment("PCL2的苗条模型UUID匹配")
+            // PCL2的苗条模型UUID匹配
+            @Comment("config.offline.match.pcl2.slim")
             val slim = true
         }
 
-        @Comment("是否允许全0的UUID(Zalith) 匹配为离线")
+        // 是否允许全0的UUID(Zalith) 匹配为离线
+        @Comment("config.offline.match.uuid.zero")
         val zero = true
 
-        @Comment("是否允许默认uuid生成方法 匹配为离线")
+        // 是否允许默认uuid生成方法 匹配为离线
+        @Comment("config.offline.match.uuid.offline")
         val offline = true
 
-        @Comment("关于PCL2启动器匹配的细节设定")
+        // 关于PCL2启动器匹配的细节设定
+        @Comment("config.offline.match.uuid.pcl2")
         val pcl2 = PCL2()
     }
 
@@ -65,4 +74,3 @@ class OfflineMatchConfig {
         val start = listOf("offline", "o-")
     }
 }
-

@@ -27,58 +27,68 @@ import org.spongepowered.configurate.objectmapping.meta.Comment
 @ConfigSerializable
 class EntryConfig {
 
-    @Comment("入口ID（不区分大小写），用于内部识别")
+    // 入口ID（不区分大小写），用于内部识别
+    @Comment("config.entry.id")
     var id: String = "Example"
 
-    @Comment("别称，用于内容显示")
+    // 别称，用于内容显示
+    @Comment("config.entry.name")
     var name: String = "Unnamed"
 
-    @Comment("验证服务配置")
+    // 验证服务配置
+    @Comment("config.entry.yggdrasil")
     var yggdrasil: YggdrasilAuthConfig = YggdrasilAuthConfig()
 
     @ConfigSerializable
     class YggdrasilAuthConfig {
-        @Comment(
-            "hasJoined 验证 URL"
-        )
+        // hasJoined 验证 URL
+        @Comment("config.entry.yggdrasil.url")
         var url: String = ""
 
-        @Comment("UUID透传")
+        // UUID透传
+        @Comment("config.entry.yggdrasil.pass-uuid")
         var passYggdrasilUuidToProfileResolve: Boolean = true
 
-        @Comment("验证请求超时时间（毫秒）")
+        // 验证请求超时时间（毫秒）
+        @Comment("config.entry.yggdrasil.timeout")
         var timeout: Int = 10000
 
-        @Comment("重试次数")
+        // 重试次数
+        @Comment("config.entry.yggdrasil.retry")
         var retry: Int = 0
 
-        @Comment("重试请求延迟（毫秒）")
+        // 重试请求延迟（毫秒）
+        @Comment("config.entry.yggdrasil.retry-delay")
         var retryDelay: Int = 0
 
-        @Comment("代理设置")
+        // 代理设置
+        @Comment("config.entry.yggdrasil.proxy")
         var proxy: ProxyConfig = ProxyConfig()
     }
 
     @ConfigSerializable
     class ProxyConfig {
-        @Comment(
-            """设置代理类型
-            DIRECT - 直接连接、或没有代理
-            HTTP - 表示高级协议(如HTTP或FTP)的代理
-            SOCKS - 表示一个SOCKS (V4或V5)代理"""
-        )
+        // 设置代理类型
+        // DIRECT - 直接连接、或没有代理
+        // HTTP - 表示高级协议(如HTTP或FTP)的代理
+        // SOCKS - 表示一个SOCKS (V4或V5)代理
+        @Comment("config.entry.proxy.type")
         var type: String = "DIRECT"
 
-        @Comment("代理服务器地址")
+        // 代理服务器地址
+        @Comment("config.entry.proxy.hostname")
         var hostname: String = "127.0.0.1"
 
-        @Comment("代理服务器端口")
+        // 代理服务器端口
+        @Comment("config.entry.proxy.port")
         var port: Int = 1080
 
-        @Comment("代理鉴权用户名，留空则不进行鉴权")
+        // 代理鉴权用户名，留空则不进行鉴权
+        @Comment("config.entry.proxy.username")
         var username: String = ""
 
-        @Comment("代理鉴权密码")
+        // 代理鉴权密码
+        @Comment("config.entry.proxy.password")
         var password: String = ""
     }
 }

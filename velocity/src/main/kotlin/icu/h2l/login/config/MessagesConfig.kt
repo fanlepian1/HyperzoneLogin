@@ -26,14 +26,15 @@ import org.spongepowered.configurate.objectmapping.meta.Comment
 
 @ConfigSerializable
 class MessagesConfig {
-    @Comment("默认语言；当未启用客户端语言检测，或客户端语言没有对应语言文件时使用")
+    // 默认语言；当未启用客户端语言检测，或客户端语言没有对应语言文件时使用
+    @Comment("config.messages.default-locale")
     val defaultLocale: String = "zh_cn"
 
-    @Comment("消息缺失时的回退语言；建议始终保留 en_us 或 zh_cn 之一")
+    // 消息缺失时的回退语言；建议始终保留 en_us 或 zh_cn 之一
+    @Comment("config.messages.fallback-locale")
     val fallbackLocale: String = "en_us"
 
-    @Comment("优先尝试读取客户端语言")
+    // 优先尝试读取客户端语言
+    @Comment("config.messages.use-client-locale")
     val useClientLocale: Boolean = true
 }
-
-

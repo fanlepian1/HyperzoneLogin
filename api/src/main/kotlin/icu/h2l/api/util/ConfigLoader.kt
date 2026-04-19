@@ -21,6 +21,7 @@
 
 package icu.h2l.api.util
 
+import org.spongepowered.configurate.CommentedConfigurationNode
 import org.spongepowered.configurate.ConfigurationNode
 import org.spongepowered.configurate.ConfigurationOptions
 import org.spongepowered.configurate.hocon.HoconConfigurationLoader
@@ -28,6 +29,8 @@ import org.spongepowered.configurate.kotlin.dataClassFieldDiscoverer
 import org.spongepowered.configurate.objectmapping.ObjectMapper
 import java.nio.file.Files
 import java.nio.file.Path
+
+
 
 object ConfigLoader {
     /**
@@ -38,7 +41,7 @@ object ConfigLoader {
      * @param header Intended header for the file
      * @param defaultProvider Provides the default config object if reading fails or file empty
      * @param postLoadHook A hook that gets invoked immediately after loading/getting the config. Returning a non-null instance overrides the default/loaded result.
-     * @param forceSave Whether to save the file back, usually true if first creation, but can be customized
+     * @param forceSaveHook Whether to save the file back, usually true if first creation, but can be customized
      */
     inline fun <reified T : Any> loadConfig(
         dataDirectory: Path,
@@ -75,8 +78,27 @@ object ConfigLoader {
 
         if (shouldSave) {
             targetNode.set(finalConfig)
+            ConfigCommentTranslatorProvider.getOrNull()?.let { translator ->
+                translateNodeComments(node, translator)
+            }
             loader.save(node)
         }
         return finalConfig
+    }
+
+    @PublishedApi
+    internal fun translateNodeComments(node: CommentedConfigurationNode, translator: ConfigCommentTranslator) {
+        val comment = node.comment()
+        if (comment != null) {
+            val translated = translator.translate(comment.trim())
+            if (translated != null) {
+                node.comment(translated)
+            }
+        }
+        if (node.isMap) {
+            node.childrenMap().values.forEach { child -> translateNodeComments(child, translator) }
+        } else if (node.isList) {
+            node.childrenList().forEach { child -> translateNodeComments(child, translator) }
+        }
     }
 }

@@ -28,13 +28,16 @@ import java.net.InetSocketAddress
 @Suppress("ANNOTATION_WILL_BE_APPLIED_ALSO_TO_PROPERTY_OR_FIELD")
 @ConfigSerializable
 data class VServerConfig(
-    @Comment("登录服实现模式：backend 或 outpre。推荐 outpre 模式，若有问题请使用backend模式。")
+    // 登录服实现模式：backend 或 outpre。推荐 outpre 模式，若有问题请使用backend模式。
+    @Comment("config.vserver.mode")
     val mode: String = "outpre",
 
-    @Comment("认证完成后默认进入的服务器")
+    // 认证完成后默认进入的服务器
+    @Comment("config.vserver.post-auth-default-server")
     val postAuthDefaultServer: String = "play",
 
-    @Comment("记住认证时收到的服务器跳转请求")
+    // 记住认证时收到的服务器跳转请求
+    @Comment("config.vserver.remember-requested-server")
     val rememberRequestedServerDuringAuth: Boolean = true,
 
     val backend: BackendConfig = BackendConfig(),
@@ -44,44 +47,53 @@ data class VServerConfig(
     @Suppress("ANNOTATION_WILL_BE_APPLIED_ALSO_TO_PROPERTY_OR_FIELD")
     @ConfigSerializable
     data class BackendConfig(
-        @Comment("使用的真实认证等待服 Velocity 服务器名")
+        // 使用的真实认证等待服 Velocity 服务器名
+        @Comment("config.vserver.backend.fallback-auth-server")
         val fallbackAuthServer: String = "lobby",
 
-        @Comment("等待区 UpsertPlayerInfo/TabList 兼容过滤补偿")
+        // 等待区 UpsertPlayerInfo/TabList 兼容过滤补偿
+        @Comment("config.vserver.backend.player-info-compensation")
         val enablePlayerInfoCompensation: Boolean = true,
 
-        @Comment("档案补偿同步")
+        // 档案补偿同步
+        @Comment("config.vserver.backend.profile-compensation")
         val enableProfileCompensation: Boolean = true,
 
-        @Comment("在线热改 name（风险较低，默认开启）")
+        // 在线热改 name（风险较低，默认开启）
+        @Comment("config.vserver.backend.name-hot-change")
         val enableNameHotChange: Boolean = true,
 
-        @Comment("在线热改 UUID（高风险，默认关闭）")
+        // 在线热改 UUID（高风险，默认关闭）
+        @Comment("config.vserver.backend.uuid-hot-change")
         val enableUuidHotChange: Boolean = false
     )
 
     @Suppress("ANNOTATION_WILL_BE_APPLIED_ALSO_TO_PROPERTY_OR_FIELD")
     @ConfigSerializable
     data class OutpreConfig(
-        @Comment(
-            """认证服的逻辑名，仅用于日志/状态标识；不需要在 Velocity 的 servers 中注册。
-如果使用 ViaVersion，你需要在 Velocity 的 servers 中添加注册条目，如 outpre-auth = "127.0.0.1:30066"，但不需要将其配置到 try 队列。"""
-        )
+        // 认证服的逻辑名，仅用于日志/状态标识；不需要在 Velocity 的 servers 中注册。
+        // 如果使用 ViaVersion，你需要在 Velocity 的 servers 中添加注册条目，如 outpre-auth = "127.0.0.1:30066"，但不需要将其配置到 try 队列。
+        @Comment("config.vserver.outpre.auth-label")
         val authLabel: String = "outpre-auth",
 
-        @Comment("认证服的直连 Host")
+        // 认证服的直连 Host
+        @Comment("config.vserver.outpre.auth-host")
         val authHost: String = "127.0.0.1",
 
-        @Comment("认证服的直连 Port")
+        // 认证服的直连 Port
+        @Comment("config.vserver.outpre.auth-port")
         val authPort: Int = 30066,
 
-        @Comment("转接给认证服时，在连接握手中对后端暴露的 Host；留空时使用 authHost")
+        // 转接给认证服时，在连接握手中对后端暴露的 Host；留空时使用 authHost
+        @Comment("config.vserver.outpre.presented-host")
         val presentedHost: String = "",
 
-        @Comment("转接给认证服时，在连接握手中对后端暴露的 Port；<=0 时使用 authPort")
+        // 转接给认证服时，在连接握手中对后端暴露的 Port；<=0 时使用 authPort
+        @Comment("config.vserver.outpre.presented-port")
         val presentedPort: Int = -1,
 
-        @Comment("转接给认证服时，在连接握手中对后端暴露的玩家源 IP；留空时使用玩家真实 IP")
+        // 转接给认证服时，在连接握手中对后端暴露的玩家源 IP；留空时使用玩家真实 IP
+        @Comment("config.vserver.outpre.presented-player-ip")
         val presentedPlayerIp: String = ""
     ) {
         fun resolveOutpreAuthAddress(): InetSocketAddress? {

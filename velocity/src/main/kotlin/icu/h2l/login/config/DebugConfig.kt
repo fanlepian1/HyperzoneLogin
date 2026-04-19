@@ -28,11 +28,12 @@ import org.spongepowered.configurate.objectmapping.meta.Comment
 @Suppress("ANNOTATION_WILL_BE_APPLIED_ALSO_TO_PROPERTY_OR_FIELD")
 @ConfigSerializable
 data class DebugConfig(
-    @Comment("日志调试开关；建议统一放在此分支下配置")
+    // 日志调试开关；建议统一放在此分支下配置
+    @Comment("config.debug.log")
     val log: DebugLogConfig = DebugLogConfig(),
 
-
-    @Comment("慢测试模式相关配置")
+    // 慢测试模式相关配置
+    @Comment("config.debug.slow-test")
     val slowTest: SlowTestConfig = SlowTestConfig()
 ) {
     fun isEnabled(type: HyperZoneDebugType): Boolean {
@@ -50,28 +51,35 @@ data class DebugConfig(
 @Suppress("ANNOTATION_WILL_BE_APPLIED_ALSO_TO_PROPERTY_OR_FIELD")
 @ConfigSerializable
 data class DebugLogConfig(
-    @Comment("通用 debug 日志")
+    // 通用 debug 日志
+    @Comment("config.debug.log.general")
     val general: Boolean = false,
 
-    @Comment("Floodgate / OutPre 预登录链路追踪日志")
+    // Floodgate / OutPre 预登录链路追踪日志
+    @Comment("config.debug.log.outpre-trace")
     val outPreTrace: Boolean = false,
 
-    @Comment("ProfileSkin 相关调试日志")
+    // ProfileSkin 相关调试日志
+    @Comment("config.debug.log.profile-skin")
     val profileSkin: Boolean = false,
 
-    @Comment("后端等待区兼容链路调试日志")
+    // 后端等待区兼容链路调试日志
+    @Comment("config.debug.log.backend-compat")
     val backendCompat: Boolean = false,
 
-    @Comment("Netty / GameProfile 重写链路调试日志")
+    // Netty / GameProfile 重写链路调试日志
+    @Comment("config.debug.log.network-rewrite")
     val networkRewrite: Boolean = false,
 
-    @Comment("Yggdrasil 认证链路调试日志")
+    // Yggdrasil 认证链路调试日志
+    @Comment("config.debug.log.yggdrasil-auth")
     val yggdrasilAuth: Boolean = false,
 )
 
 @Suppress("ANNOTATION_WILL_BE_APPLIED_ALSO_TO_PROPERTY_OR_FIELD")
 @ConfigSerializable
 data class SlowTestConfig(
-    @Comment("开启后，外部模块直接调用 overVerify 将被忽略，只有等待区 /over 才会真正完成 overVerify")
+    // 开启后，外部模块直接调用 overVerify 将被忽略，只有等待区 /over 才会真正完成 overVerify
+    @Comment("config.debug.slow-test.enabled")
     val enabled: Boolean = false
 )

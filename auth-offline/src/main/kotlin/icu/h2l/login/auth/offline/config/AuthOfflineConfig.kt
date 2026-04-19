@@ -27,10 +27,12 @@ import org.spongepowered.configurate.objectmapping.meta.Comment
 @Suppress("ANNOTATION_WILL_BE_APPLIED_ALSO_TO_PROPERTY_OR_FIELD")
 @ConfigSerializable
 data class AuthOfflineConfig(
-    @Comment("离线认证主要设置 (原来的main块)")
+    // 离线认证主要设置 (原来的main块)
+    @Comment("config.offline.main")
     val main: OfflineAuthConfig = OfflineAuthConfig(),
 
-    @Comment("玩家正离线形态匹配设置 (原来的match块)")
+    // 玩家正离线形态匹配设置 (原来的match块)
+    @Comment("config.offline.match")
     val match: OfflineMatchConfig = OfflineMatchConfig()
 )
 

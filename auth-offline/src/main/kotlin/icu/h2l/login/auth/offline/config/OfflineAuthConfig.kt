@@ -26,161 +26,201 @@ import org.spongepowered.configurate.objectmapping.meta.Comment
 
 @ConfigSerializable
 class OfflineAuthConfig {
-    @Comment("密码规则")
+    // 密码规则
+    @Comment("config.offline.password")
     val password = PasswordPolicy()
 
-    @Comment("登录保护")
+    // 登录保护
+    @Comment("config.offline.login")
     val login = LoginProtection()
 
-    @Comment("邮箱与找回")
+    // 邮箱与找回
+    @Comment("config.offline.email")
     val email = EmailConfig()
 
-    @Comment("提示")
+    // 提示
+    @Comment("config.offline.prompt")
     val prompt = PromptConfig()
 
-    @Comment("会话自动登录")
+    // 会话自动登录
+    @Comment("config.offline.session")
     val session = SessionConfig()
 
-    @Comment("透传离线 UUID")
+    // 透传离线 UUID
+    @Comment("config.offline.pass-offline-uuid")
     var passOfflineUuidToProfileResolve: Boolean = true
 
-    @Comment("TOTP 二步验证")
+    // TOTP 二步验证
+    @Comment("config.offline.totp")
     val totp = TotpConfig()
 
     @ConfigSerializable
     class PasswordPolicy {
-        @Comment("最短密码长度")
+        // 最短密码长度
+        @Comment("config.offline.password.min-length")
         val minLength = 6
 
-        @Comment("最长密码长度")
+        // 最长密码长度
+        @Comment("config.offline.password.max-length")
         val maxLength = 64
 
-        @Comment("禁止密码含用户名")
+        // 禁止密码含用户名
+        @Comment("config.offline.password.deny-name")
         val denyNameInPassword = true
     }
 
     @ConfigSerializable
     class LoginProtection {
-        @Comment("输错多少次锁定登录")
+        // 输错多少次锁定登录
+        @Comment("config.offline.login.max-attempts")
         val maxAttempts = 5
 
-        @Comment("锁定冷却时间（秒）")
+        // 锁定冷却时间（秒）
+        @Comment("config.offline.login.block-seconds")
         val blockSeconds = 300
     }
 
     @ConfigSerializable
     class EmailConfig {
-        @Comment("启用邮箱命令")
+        // 启用邮箱命令
+        @Comment("config.offline.email.enabled")
         val enabled = true
 
-        @Comment("恢复码投递模式：LOG 或 SMTP")
+        // 恢复码投递模式：LOG 或 SMTP
+        @Comment("config.offline.email.delivery-mode")
         val deliveryMode = "LOG"
 
-        @Comment("恢复码长度")
+        // 恢复码长度
+        @Comment("config.offline.email.code-length")
         val recoveryCodeLength = 6
 
-        @Comment("恢复码有效期（分钟）")
+        // 恢复码有效期（分钟）
+        @Comment("config.offline.email.code-expire")
         val recoveryCodeExpireMinutes = 15
 
-        @Comment("请求恢复邮件冷却（秒）")
+        // 请求恢复邮件冷却（秒）
+        @Comment("config.offline.email.recovery-cooldown")
         val recoveryCooldownSeconds = 120
 
-        @Comment("单个恢复码允许输错次数")
+        // 单个恢复码允许输错次数
+        @Comment("config.offline.email.max-verify-attempts")
         val maxCodeVerifyAttempts = 3
 
-        @Comment("恢复码校验成功后，允许修改密码的时间窗口（分钟）")
+        // 恢复码校验成功后，允许修改密码的时间窗口（分钟）
+        @Comment("config.offline.email.reset-window")
         val resetPasswordWindowMinutes = 10
 
-        @Comment("恢复邮件模板与 SMTP 配置")
-
+        // 恢复邮件模板与 SMTP 配置
+        @Comment("config.offline.email.smtp")
         val smtp = SmtpConfig()
     }
 
     @ConfigSerializable
     class SmtpConfig {
-        @Comment("邮件显示的服务器名称")
+        // 邮件显示的服务器名称
+        @Comment("config.offline.smtp.server-name")
         val serverName = "HyperZoneLogin"
 
-        @Comment("SMTP 服务器地址")
+        // SMTP 服务器地址
+        @Comment("config.offline.smtp.host")
         val host = "smtp.example.com"
 
-        @Comment("SMTP 端口")
+        // SMTP 端口
+        @Comment("config.offline.smtp.port")
         val port = 587
 
-        @Comment("是否启用 SMTP 认证")
+        // 是否启用 SMTP 认证
+        @Comment("config.offline.smtp.auth")
         val auth = true
 
-        @Comment("SMTP 用户名")
+        // SMTP 用户名
+        @Comment("config.offline.smtp.username")
         val username = "noreply@example.com"
 
-        @Comment("SMTP 密码或应用专用密码")
+        // SMTP 密码或应用专用密码
+        @Comment("config.offline.smtp.password")
         val password = "change-me"
 
-        @Comment("是否启用 STARTTLS")
+        // 是否启用 STARTTLS
+        @Comment("config.offline.smtp.start-tls")
         val startTls = true
 
-        @Comment("是否直接使用 SSL")
+        // 是否直接使用 SSL
+        @Comment("config.offline.smtp.ssl")
         val ssl = false
 
-        @Comment("连接超时（毫秒）")
+        // 连接超时（毫秒）
+        @Comment("config.offline.smtp.connection-timeout")
         val connectionTimeoutMillis = 10000
 
-        @Comment("读取超时（毫秒）")
+        // 读取超时（毫秒）
+        @Comment("config.offline.smtp.read-timeout")
         val readTimeoutMillis = 10000
 
-        @Comment("写入超时（毫秒）")
+        // 写入超时（毫秒）
+        @Comment("config.offline.smtp.write-timeout")
         val writeTimeoutMillis = 10000
 
-        @Comment("发件人邮箱")
+        // 发件人邮箱
+        @Comment("config.offline.smtp.from-address")
         val fromAddress = "noreply@example.com"
 
-        @Comment("发件人名称")
+        // 发件人名称
+        @Comment("config.offline.smtp.from-name")
         val fromName = "HyperZoneLogin"
 
-        @Comment("恢复邮件主题，支持占位符：%server%、%player%")
+        // 恢复邮件主题，支持占位符：%server%、%player%
+        @Comment("config.offline.smtp.recovery-subject")
         val recoverySubject = "[%server%] 账号密码找回验证码"
 
-        @Comment(
-            "恢复邮件正文，支持占位符：%server%、%player%、%email%、%code%、%minutes%。使用 \\n 表示换行"
-        )
+        // 恢复邮件正文，支持占位符：%server%、%player%、%email%、%code%、%minutes%。使用 \n 表示换行
+        @Comment("config.offline.smtp.recovery-body")
         val recoveryBody =
             "你好，%player%。\\n\\n你在 %server% 请求了离线账号密码找回。\\n验证码：%code%\\n有效期：%minutes% 分钟\\n\\n如果不是你本人操作，请忽略这封邮件。"
     }
 
     @ConfigSerializable
     class PromptConfig {
-        @Comment("首次进入邮箱找回提示")
+        // 首次进入邮箱找回提示
+        @Comment("config.offline.prompt.show-recovery-hint")
         val showRecoveryHint = true
     }
 
     @ConfigSerializable
     class SessionConfig {
-        @Comment("短期会话自动登录")
+        // 短期会话自动登录
+        @Comment("config.offline.session.enabled")
         val enabled = false
 
-        @Comment("会话有效期（分钟）")
+        // 会话有效期（分钟）
+        @Comment("config.offline.session.expire-minutes")
         val expireMinutes = 30
 
-        @Comment("会话与玩家 IP 绑定")
+        // 会话与玩家 IP 绑定
+        @Comment("config.offline.session.bind-ip")
         val bindIp = true
 
-        @Comment("注册成功后立刻签发会话")
+        // 注册成功后立刻签发会话
+        @Comment("config.offline.session.issue-on-register")
         val issueOnRegister = true
     }
 
     @ConfigSerializable
     class TotpConfig {
-        @Comment("启用 TOTP（二步验证功能）")
+        // 启用 TOTP（二步验证功能）
+        @Comment("config.offline.totp.enabled")
         val enabled = true
 
-        @Comment("在验证器 App 中显示的名称")
+        // 在验证器 App 中显示的名称
+        @Comment("config.offline.totp.issuer")
         val issuer = "HyperZoneLogin"
 
-        @Comment("待确认 TOTP 密钥的有效期（分钟）")
+        // 待确认 TOTP 密钥的有效期（分钟）
+        @Comment("config.offline.totp.pending-expire")
         val pendingExpireMinutes = 10
 
-        @Comment("允许 短期会话 跳过二次验证")
+        // 允许 短期会话 跳过二次验证
+        @Comment("config.offline.totp.allow-session-bypass")
         val allowSessionBypass = false
     }
 }
-

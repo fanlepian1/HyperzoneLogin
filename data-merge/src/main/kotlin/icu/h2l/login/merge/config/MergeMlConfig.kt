@@ -26,74 +26,93 @@ import org.spongepowered.configurate.objectmapping.meta.Comment
 
 @ConfigSerializable
 class MergeMlConfig {
-    @Comment("数据库配置")
+    // 数据库配置
+    @Comment("config.merge-ml.source")
     var source: SourceConfig = SourceConfig()
 
-    @Comment("表名配置")
+    // 表名配置
+    @Comment("config.merge-ml.tables")
     var tables: SourceTables = SourceTables()
 
-    @Comment("MultiLogin服务ID 到 HZL入口ID 映射，未配置时默认使用 ml_{服务ID}")
+    // MultiLogin服务ID 到 HZL入口ID 映射，未配置时默认使用 ml_{服务ID}
+    @Comment("config.merge-ml.service-id-mapping")
     var serviceIdMapping: MutableMap<Int, String> = mutableMapOf(
         1 to "mojang"
     )
 
     @ConfigSerializable
     class SourceConfig {
-        @Comment("库类型，支持 H2DB 或 MYSQL")
+        // 库类型，支持 H2DB 或 MYSQL
+        @Comment("config.merge-ml.source.type")
         var type: String = "H2DB"
 
-        @Comment("H2 配置")
+        // H2 配置
+        @Comment("config.merge-ml.source.h2")
         var h2: H2Config = H2Config()
 
-        @Comment("MySQL 配置")
+        // MySQL 配置
+        @Comment("config.merge-ml.source.mysql")
         var mysql: MysqlConfig = MysqlConfig()
     }
 
     @ConfigSerializable
     class H2Config {
-        @Comment("可选：直接指定 JDBC URL。留空时按 path + parameters 生成")
+        // 可选：直接指定 JDBC URL。留空时按 path + parameters 生成
+        @Comment("config.merge-ml.h2.jdbc-url")
         var jdbcUrl: String = ""
 
-        @Comment("文件路径（相对于插件数据目录）")
+        // 文件路径（相对于插件数据目录）
+        @Comment("config.merge-ml.h2.path")
         var path: String = "data-merge/multilogin"
 
-        @Comment("JDBC 附加参数")
+        // JDBC 附加参数
+        @Comment("config.merge-ml.h2.parameters")
         var parameters: String = "MODE=MySQL"
 
-        @Comment("用户名")
+        // 用户名
+        @Comment("config.merge-ml.h2.username")
         var username: String = "root"
 
-        @Comment("密码")
+        // 密码
+        @Comment("config.merge-ml.h2.password")
         var password: String = "root"
     }
 
     @ConfigSerializable
     class MysqlConfig {
-        @Comment("地址")
+        // 地址
+        @Comment("config.merge-ml.mysql.host")
         var host: String = "127.0.0.1"
 
-        @Comment("端口")
+        // 端口
+        @Comment("config.merge-ml.mysql.port")
         var port: Int = 3306
 
-        @Comment("库名")
+        // 库名
+        @Comment("config.merge-ml.mysql.database")
         var database: String = "mixed_login"
 
-        @Comment("用户名")
+        // 用户名
+        @Comment("config.merge-ml.mysql.username")
         var username: String = "root"
 
-        @Comment("密码")
+        // 密码
+        @Comment("config.merge-ml.mysql.password")
         var password: String = "password"
 
-        @Comment("JDBC 附加参数")
+        // JDBC 附加参数
+        @Comment("config.merge-ml.mysql.parameters")
         var parameters: String = "useSSL=false&serverTimezone=UTC&characterEncoding=utf8"
     }
 
     @ConfigSerializable
     class SourceTables {
-        @Comment("UserDataTableV3 的表名")
+        // UserDataTableV3 的表名
+        @Comment("config.merge-ml.tables.user-data-table")
         var userDataTable: String = "multilogin_user_data_v3"
 
-        @Comment("InGameProfileTableV3 的表名")
+        // InGameProfileTableV3 的表名
+        @Comment("config.merge-ml.tables.in-game-profile-table")
         var inGameProfileTable: String = "multilogin_in_game_profile_v3"
     }
 }

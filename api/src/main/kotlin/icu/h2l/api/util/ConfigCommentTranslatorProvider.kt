@@ -19,15 +19,36 @@
  *
  */
 
-package icu.h2l.login.config
+package icu.h2l.api.util
 
-import org.spongepowered.configurate.objectmapping.ConfigSerializable
-import org.spongepowered.configurate.objectmapping.meta.Comment
+/**
+ * [ConfigCommentTranslator] 的全局访问器。
+ *
+ * 在插件初始化阶段（任何配置文件加载之前）由主插件注册翻译器实例，
+ * 供 [ConfigLoader] 在保存配置文件时自动将翻译键替换为本地化注释。
+ */
+object ConfigCommentTranslatorProvider {
 
-@Suppress("ANNOTATION_WILL_BE_APPLIED_ALSO_TO_PROPERTY_OR_FIELD")
-@ConfigSerializable
-data class MiscConfig(
-    // 不给服务器发送 CHAT_SESSION_UPDATE包
-    @Comment("config.misc.kill-chat-session")
-    val killChatSession: Boolean = true
-)
+    @Volatile
+    private var translator: ConfigCommentTranslator? = null
+
+    /**
+     * 绑定翻译器实例（应在任何配置加载前调用）。
+     */
+    fun bind(translator: ConfigCommentTranslator) {
+        this.translator = translator
+    }
+
+    /**
+     * 获取当前翻译器，若未注册则返回 null。
+     */
+    fun getOrNull(): ConfigCommentTranslator? = translator
+
+    /**
+     * 清除翻译器（通常在插件卸载时调用）。
+     */
+    fun clear() {
+        translator = null
+    }
+}
+

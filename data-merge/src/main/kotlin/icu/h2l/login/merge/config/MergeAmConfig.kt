@@ -26,60 +26,75 @@ import org.spongepowered.configurate.objectmapping.meta.Comment
 
 @ConfigSerializable
 class MergeAmConfig {
-    @Comment("数据库配置")
+    // 数据库配置
+    @Comment("config.merge-am.source")
     var source: SourceConfig = SourceConfig()
 
-    @Comment("表配置")
+    // 表配置
+    @Comment("config.merge-am.tables")
     var tables: SourceTables = SourceTables()
 
     @ConfigSerializable
     class SourceConfig {
-        @Comment("库类型，支持 SQLITE 或 MYSQL")
+        // 库类型，支持 SQLITE 或 MYSQL
+        @Comment("config.merge-am.source.type")
         var type: String = "SQLITE"
 
-        @Comment("SQLite 配置")
+        // SQLite 配置
+        @Comment("config.merge-am.source.sqlite")
         var sqlite: SqliteConfig = SqliteConfig()
 
-        @Comment("MySQL 配置")
+        // MySQL 配置
+        @Comment("config.merge-am.source.mysql")
         var mysql: MysqlConfig = MysqlConfig()
     }
 
     @ConfigSerializable
     class SqliteConfig {
-        @Comment("可选：直接指定 JDBC URL。留空时按 path + parameters 生成")
+        // 可选：直接指定 JDBC URL。留空时按 path + parameters 生成
+        @Comment("config.merge-am.sqlite.jdbc-url")
         var jdbcUrl: String = ""
 
-        @Comment("SQLite 文件路径（相对于插件数据目录）")
+        // SQLite 文件路径（相对于插件数据目录）
+        @Comment("config.merge-am.sqlite.path")
         var path: String = "data-merge/authme.db"
 
-        @Comment("可选：JDBC 附加参数")
+        // 可选：JDBC 附加参数
+        @Comment("config.merge-am.sqlite.parameters")
         var parameters: String = ""
     }
 
     @ConfigSerializable
     class MysqlConfig {
-        @Comment("地址")
+        // 地址
+        @Comment("config.merge-am.mysql.host")
         var host: String = "127.0.0.1"
 
-        @Comment("端口")
+        // 端口
+        @Comment("config.merge-am.mysql.port")
         var port: Int = 3306
 
-        @Comment("库名")
+        // 库名
+        @Comment("config.merge-am.mysql.database")
         var database: String = "authme"
 
-        @Comment("用户名")
+        // 用户名
+        @Comment("config.merge-am.mysql.username")
         var username: String = "root"
 
-        @Comment("密码")
+        // 密码
+        @Comment("config.merge-am.mysql.password")
         var password: String = "password"
 
-        @Comment("可选：JDBC 附加参数")
+        // 可选：JDBC 附加参数
+        @Comment("config.merge-am.mysql.parameters")
         var parameters: String = "useSSL=false&serverTimezone=UTC&characterEncoding=utf8"
     }
 
     @ConfigSerializable
     class SourceTables {
-        @Comment("表名")
+        // 表名
+        @Comment("config.merge-am.tables.authme-table")
         var authMeTable: String = "authme"
     }
 }

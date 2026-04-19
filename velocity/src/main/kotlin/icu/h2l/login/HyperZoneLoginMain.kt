@@ -32,7 +32,9 @@ import icu.h2l.api.message.HyperZoneMessageServiceProvider
 import icu.h2l.api.module.HyperSubModule
 import icu.h2l.api.player.HyperZonePlayerAccessor
 import icu.h2l.api.profile.HyperZoneProfileServiceProvider
+import icu.h2l.api.util.ConfigCommentTranslatorProvider
 import icu.h2l.api.util.ConfigLoader
+import icu.h2l.login.config.i18n.ConfigCommentI18nService
 import icu.h2l.api.vServer.HyperZoneVServerAdapter
 import icu.h2l.login.command.BindCodeCommandRegistrar
 import icu.h2l.login.command.HyperZoneLoginCommand
@@ -111,6 +113,8 @@ class HyperZoneLoginMain(
     @Suppress("unused", "UNUSED_PARAMETER")
     fun onEnable(event: ProxyInitializeEvent) {
         registerApiLogger()
+        // 在加载任何配置之前初始化配置注释 i18n 服务
+        ConfigCommentTranslatorProvider.bind(ConfigCommentI18nService(logger))
         loadCoreConfig()
         messageService = MessageService(dataDirectory, logger)
         messageService.load(coreConfig.messages)
@@ -342,6 +346,8 @@ class HyperZoneLoginMain(
             defaultProvider = { CoreConfig() }
         )
         coreConfig = config
+        // 配置加载完成后，用 defaultLocale 覆盖 i18n 服务，使后续模块配置首次生成时使用正确语言
+        ConfigCommentTranslatorProvider.bind(ConfigCommentI18nService(logger, config.messages.defaultLocale))
     }
 
     private fun connectDatabase() {

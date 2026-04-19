@@ -26,22 +26,27 @@ import org.spongepowered.configurate.objectmapping.meta.Comment
 
 @ConfigSerializable
 class ModulesConfig {
-    @Comment("Floodgate 认证；仅在已安装 floodgate 时生效")
+    // Floodgate 认证；仅在已安装 floodgate 时生效
+    @Comment("config.modules.auth-floodgate")
     val authFloodgate: Boolean = true
 
-    @Comment("离线认证")
+    // 离线认证
+    @Comment("config.modules.auth-offline")
     val authOffline: Boolean = true
 
-    @Comment("Yggdrasil 认证")
+    // Yggdrasil 认证
+    @Comment("config.modules.auth-yggd")
     val authYggd: Boolean = true
 
-    @Comment("安全防护")
+    // 安全防护
+    @Comment("config.modules.safe")
     val safe: Boolean = true
 
-    @Comment("皮肤缓存")
+    // 皮肤缓存
+    @Comment("config.modules.profile-skin")
     val profileSkin: Boolean = true
 
-    @Comment("数据迁移")
+    // 数据迁移
+    @Comment("config.modules.data-merge")
     val dataMerge: Boolean = false
 }
-

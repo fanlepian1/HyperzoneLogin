@@ -26,111 +26,137 @@ import org.spongepowered.configurate.objectmapping.meta.Comment
 
 @ConfigSerializable
 class SafeConfig {
-    @Comment("启用防护")
+    // 启用防护
+    @Comment("config.safe.enable")
     val enable = true
 
-    @Comment("全局连接频率限制")
+    // 全局连接频率限制
+    @Comment("config.safe.global-rate-limit")
     @JvmField
     val globalRateLimit = RateLimitConfig(maxAttempts = 80, windowSeconds = 10)
 
-    @Comment("同 IP 连接频率限制")
+    // 同 IP 连接频率限制
+    @Comment("config.safe.ip-rate-limit")
     @JvmField
     val ipRateLimit = RateLimitConfig(maxAttempts = 8, windowSeconds = 10)
 
-    @Comment("同 IP 超阈值后的临时冷却")
+    // 同 IP 超阈值后的临时冷却
+    @Comment("config.safe.ip-cooldown")
     @JvmField
     val ipCooldown = IpCooldownConfig()
 
-    @Comment("自动高峰防护模式")
+    // 自动高峰防护模式
+    @Comment("config.safe.strict-mode")
     @JvmField
     val strictMode = StrictModeConfig()
 
-    @Comment("认证失败联动防护")
+    // 认证失败联动防护
+    @Comment("config.safe.auth-failure")
     @JvmField
     val authFailure = AuthFailureConfig()
 
-    @Comment("用户名基础校验")
+    // 用户名基础校验
+    @Comment("config.safe.username")
     @JvmField
     val username = UsernameConfig()
 
     @ConfigSerializable
     class RateLimitConfig(
-        @param:Comment("窗口期内最多允许的尝试次数")
+        // 窗口期内最多允许的尝试次数
+        @param:Comment("config.safe.rate-limit.max-attempts")
         val maxAttempts: Int = 10,
-        @param:Comment("窗口期长度（秒）")
+        // 窗口期长度（秒）
+        @param:Comment("config.safe.rate-limit.window-seconds")
         val windowSeconds: Int = 10
     )
 
     @ConfigSerializable
     class UsernameConfig {
-        @Comment("用户名基础校验")
+        // 用户名基础校验
+        @Comment("config.safe.username.enable")
         val enable = true
 
-        @Comment("最短长度")
+        // 最短长度
+        @Comment("config.safe.username.min-length")
         val minLength = 3
 
-        @Comment("最长长度")
+        // 最长长度
+        @Comment("config.safe.username.max-length")
         val maxLength = 16
 
-        @Comment("用户名不包含首尾空白")
+        // 用户名不包含首尾空白
+        @Comment("config.safe.username.deny-whitespace")
         val denyLeadingOrTrailingWhitespace = true
 
-        @Comment("允许的用户名正则，默认与 Minecraft 传统用户名规则一致")
+        // 允许的用户名正则，默认与 Minecraft 传统用户名规则一致
+        @Comment("config.safe.username.pattern")
         val pattern = "^[A-Za-z0-9_]+$"
     }
 
     @ConfigSerializable
     class IpCooldownConfig {
-        @Comment("同 IP 临时冷却")
+        // 同 IP 临时冷却
+        @Comment("config.safe.ip-cooldown.enabled")
         val enabled = true
 
-        @Comment("在统计窗口内触发多少次限流后，开始临时封禁")
+        // 在统计窗口内触发多少次限流后，开始临时封禁
+        @Comment("config.safe.ip-cooldown.trigger-attempts")
         val triggerAttempts = 3
 
-        @Comment("统计窗口长度（秒）")
+        // 统计窗口长度（秒）
+        @Comment("config.safe.ip-cooldown.window-seconds")
         val windowSeconds = 60
 
-        @Comment("触发后的冷却时长（秒）")
+        // 触发后的冷却时长（秒）
+        @Comment("config.safe.ip-cooldown.cooldown-seconds")
         val cooldownSeconds = 300
     }
 
     @ConfigSerializable
     class StrictModeConfig {
-        @Comment("自动高峰防护模式")
+        // 自动高峰防护模式
+        @Comment("config.safe.strict-mode.enabled")
         val enabled = true
 
-        @Comment("全局连接请求在窗口内达到多少次后进入 严格模式")
+        // 全局连接请求在窗口内达到多少次后进入 严格模式
+        @Comment("config.safe.strict-mode.trigger-attempts")
         val triggerAttempts = 120
 
-        @Comment("统计窗口（秒）")
+        // 统计窗口（秒）
+        @Comment("config.safe.strict-mode.window-seconds")
         val windowSeconds = 15
 
-        @Comment("保持时长（秒）")
+        // 保持时长（秒）
+        @Comment("config.safe.strict-mode.recover-after")
         val recoverAfterSeconds = 90
 
-        @Comment("全局限流")
+        // 全局限流
+        @Comment("config.safe.strict-mode.global-rate-limit")
         @JvmField
         val globalRateLimit = RateLimitConfig(maxAttempts = 30, windowSeconds = 10)
 
-        @Comment("同 IP 限流")
+        // 同 IP 限流
+        @Comment("config.safe.strict-mode.ip-rate-limit")
         @JvmField
         val ipRateLimit = RateLimitConfig(maxAttempts = 4, windowSeconds = 10)
     }
 
     @ConfigSerializable
     class AuthFailureConfig {
-        @Comment("统一认证失败联动")
+        // 统一认证失败联动
+        @Comment("config.safe.auth-failure.enabled")
         val enabled = true
 
-        @Comment("同一 IP 在统计窗口内累计多少次认证失败后开始冷却")
+        // 同一 IP 在统计窗口内累计多少次认证失败后开始冷却
+        @Comment("config.safe.auth-failure.trigger-attempts")
         val triggerAttempts = 4
 
-        @Comment("认证失败统计窗口（秒）")
+        // 认证失败统计窗口（秒）
+        @Comment("config.safe.auth-failure.window-seconds")
         val windowSeconds = 300
 
-        @Comment("触发后的冷却时长（秒）")
+        // 触发后的冷却时长（秒）
+        @Comment("config.safe.auth-failure.cooldown-seconds")
         val cooldownSeconds = 600
     }
 }
-
-

@@ -26,41 +26,51 @@ import org.spongepowered.configurate.objectmapping.meta.Comment
 
 @ConfigSerializable
 class ProfileSkinConfig {
-    @Comment("启用本模块")
+    // 启用本模块
+    @Comment("config.skin.enabled")
     var enabled: Boolean = true
 
-    @Comment("优先缓存并已携带签名的材质")
+    // 优先缓存并已携带签名的材质
+    @Comment("config.skin.prefer-upstream-signed")
     var preferUpstreamSignedTextures: Boolean = true
 
-    @Comment("不修复的入口ID")
+    // 不修复的入口ID
+    @Comment("config.skin.trusted-entries")
     var trustedSignedTextureEntries: Set<String> = setOf("mojang")
 
-    @Comment("修复非官方签名")
+    // 修复非官方签名
+    @Comment("config.skin.restore-unsigned")
     var restoreUnsignedTextures: Boolean = true
 
-
-    @Comment("MineSkin 修复配置")
+    // MineSkin 修复配置
+    @Comment("config.skin.mineskin")
     var mineSkin: MineSkinConfig = MineSkinConfig()
 }
 
 @ConfigSerializable
 class MineSkinConfig {
-    @Comment("生成方式：URL 或 UPLOAD")
+    // 生成方式：URL 或 UPLOAD
+    @Comment("config.skin.mineskin.method")
     var method: String = "URL"
 
-    @Comment("出错时改模式重试")
+    // 出错时改模式重试
+    @Comment("config.skin.mineskin.retry-upload")
     var retryUploadOnUrlReadFailure: Boolean = true
 
-    @Comment("URL 模式接口地址")
+    // URL 模式接口地址
+    @Comment("config.skin.mineskin.url-endpoint")
     var urlEndpoint: String = "https://api.mineskin.org/generate/url"
 
-    @Comment("上传模式接口地址")
+    // 上传模式接口地址
+    @Comment("config.skin.mineskin.upload-endpoint")
     var uploadEndpoint: String = "https://api.mineskin.org/generate/upload"
 
-    @Comment("请求超时时间（毫秒）")
+    // 请求超时时间（毫秒）
+    @Comment("config.skin.mineskin.timeout")
     var timeoutMillis: Long = 15000
 
-    @Comment("HTTP User-Agent")
+    // HTTP User-Agent
+    @Comment("config.skin.mineskin.user-agent")
     var userAgent: String = "HyperZoneLogin/1.0"
 }
 
@@ -74,4 +84,3 @@ enum class MineSkinMethod {
         }
     }
 }
-

@@ -27,97 +27,120 @@ import org.spongepowered.configurate.objectmapping.meta.Comment
 @ConfigSerializable
 class DatabaseSourceConfig {
 
-    @Comment(
-        """数据库类型
-        支持的值: SQLITE, MYSQL, MARIADB"""
-    )
+    // 数据库类型\n支持的值: SQLITE, MYSQL, MARIADB
+    @Comment("config.db.type")
     val type: String = "SQLITE"
 
-    @Comment("SQLite 数据库配置")
+    // SQLite 数据库配置
+    @Comment("config.db.sqlite")
     val sqlite: SQLiteConfig = SQLiteConfig()
 
-    @Comment("MySQL 数据库配置")
+    // MySQL 数据库配置
+    @Comment("config.db.mysql")
     val mysql: MySQLConfig = MySQLConfig()
 
-    @Comment("MariaDB 数据库配置")
+    // MariaDB 数据库配置
+    @Comment("config.db.mariadb")
     val mariadb: MariaDBConfig = MariaDBConfig()
 
-    @Comment("数据库表前缀")
+    // 数据库表前缀
+    @Comment("config.db.table-prefix")
     val tablePrefix: String = "hz_"
 
-    @Comment("连接池配置")
+    // 连接池配置
+    @Comment("config.db.pool")
     val pool: PoolConfig = PoolConfig()
 
     @ConfigSerializable
     class SQLiteConfig {
-        @Comment("数据库文件路径（相对于插件数据目录）")
+        // 数据库文件路径（相对于插件数据目录）
+        @Comment("config.db.sqlite.path")
         val path: String = "data/hyperzone_login.db"
     }
 
     @ConfigSerializable
     class MySQLConfig {
-        @Comment("地址")
+        // 地址
+        @Comment("config.db.host")
         val host: String = "localhost"
 
-        @Comment("端口")
+        // 端口
+        @Comment("config.db.port")
         val port: Int = 3306
 
-        @Comment("库名")
+        // 库名
+        @Comment("config.db.database-name")
         val database: String = "hyperzone_login"
 
-        @Comment("用户名")
+        // 用户名
+        @Comment("config.db.username")
         val username: String = "root"
 
-        @Comment("密码")
+        // 密码
+        @Comment("config.db.password")
         val password: String = "password"
 
-        @Comment("额外的连接参数")
+        // 额外的连接参数
+        @Comment("config.db.parameters")
         val parameters: String = "useSSL=false&serverTimezone=UTC&characterEncoding=utf8"
 
-        @Comment("JDBC 驱动类")
+        // JDBC 驱动类
+        @Comment("config.db.driver-class-name")
         val driverClassName: String = "com.mysql.cj.jdbc.Driver"
     }
 
     @ConfigSerializable
     class MariaDBConfig {
-        @Comment("地址")
+        // 地址
+        @Comment("config.db.host")
         val host: String = "localhost"
 
-        @Comment("端口")
+        // 端口
+        @Comment("config.db.port")
         val port: Int = 3306
 
-        @Comment("库名")
+        // 库名
+        @Comment("config.db.database-name")
         val database: String = "hyperzone_login"
 
-        @Comment("用户名")
+        // 用户名
+        @Comment("config.db.username")
         val username: String = "root"
 
-        @Comment("密码")
+        // 密码
+        @Comment("config.db.password")
         val password: String = "password"
 
-        @Comment("额外的连接参数")
+        // 额外的连接参数
+        @Comment("config.db.parameters")
         val parameters: String = "useSSL=false&characterEncoding=utf8"
 
-        @Comment("JDBC 驱动类")
+        // JDBC 驱动类
+        @Comment("config.db.driver-class-name")
         val driverClassName: String = "org.mariadb.jdbc.Driver"
     }
 
 
     @ConfigSerializable
     class PoolConfig {
-        @Comment("最大连接数")
+        // 最大连接数
+        @Comment("config.db.pool.max-pool-size")
         val maximumPoolSize: Int = 10
 
-        @Comment("最小空闲连接数")
+        // 最小空闲连接数
+        @Comment("config.db.pool.min-idle")
         val minimumIdle: Int = 2
 
-        @Comment("连接超时时间（毫秒）")
+        // 连接超时时间（毫秒）
+        @Comment("config.db.pool.connection-timeout")
         val connectionTimeout: Long = 30000
 
-        @Comment("空闲连接超时时间（毫秒）")
+        // 空闲连接超时时间（毫秒）
+        @Comment("config.db.pool.idle-timeout")
         val idleTimeout: Long = 600000
 
-        @Comment("连接最大生命周期（毫秒）")
+        // 连接最大生命周期（毫秒）
+        @Comment("config.db.pool.max-lifetime")
         val maxLifetime: Long = 1800000
     }
 }

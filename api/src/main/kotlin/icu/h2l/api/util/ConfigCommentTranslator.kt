@@ -19,15 +19,21 @@
  *
  */
 
-package icu.h2l.login.config
+package icu.h2l.api.util
 
-import org.spongepowered.configurate.objectmapping.ConfigSerializable
-import org.spongepowered.configurate.objectmapping.meta.Comment
+/**
+ * 配置文件注释翻译器。
+ *
+ * 用于将 @Comment 注解中的翻译键（如 "config.core.database"）
+ * 解析为当前服务端区域对应的自然语言文本，并在配置文件首次生成时写入。
+ */
+fun interface ConfigCommentTranslator {
+    /**
+     * 将给定的翻译键翻译为本地化文本。
+     *
+     * @param key 翻译键，格式如 "config.core.database"
+     * @return 翻译结果；若键不存在则返回 null（保留原始键）
+     */
+    fun translate(key: String): String?
+}
 
-@Suppress("ANNOTATION_WILL_BE_APPLIED_ALSO_TO_PROPERTY_OR_FIELD")
-@ConfigSerializable
-data class MiscConfig(
-    // 不给服务器发送 CHAT_SESSION_UPDATE包
-    @Comment("config.misc.kill-chat-session")
-    val killChatSession: Boolean = true
-)

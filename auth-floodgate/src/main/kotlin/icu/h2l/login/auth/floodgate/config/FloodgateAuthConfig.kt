@@ -26,10 +26,11 @@ import org.spongepowered.configurate.objectmapping.meta.Comment
 
 @ConfigSerializable
 class FloodgateAuthConfig {
-    @Comment("去除 Floodgate 玩家名前缀")
+    // 去除 Floodgate 玩家名前缀
+    @Comment("config.floodgate.strip-prefix")
     var stripUsernamePrefix: Boolean = true
 
-    @Comment("透传 Floodgate UUID")
+    // 透传 Floodgate UUID
+    @Comment("config.floodgate.pass-uuid")
     var passFloodgateUuidToProfileResolve: Boolean = true
 }
-
