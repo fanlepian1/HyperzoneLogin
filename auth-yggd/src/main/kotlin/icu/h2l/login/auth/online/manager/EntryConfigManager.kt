@@ -49,7 +49,7 @@ class EntryConfigManager(
     private val entryConfigs = mutableMapOf<String, EntryConfig>()
 
     companion object {
-        private const val ENTRY_FOLDER = "entry"
+        private const val ENTRY_FOLDER = "auth-yggd"
         private const val EXAMPLE_FOLDER = "example"
         private const val CONFIG_EXTENSION = ".conf"
     }
@@ -65,7 +65,7 @@ class EntryConfigManager(
             Files.createDirectories(entryDir)
             createDefaultConfigs(entryDir)
             createExampleConfig(entryDir)
-            debug(HyperZoneDebugType.YGGDRASIL_AUTH) { "创建 entry 目录和默认配置文件" }
+            debug(HyperZoneDebugType.YGGDRASIL_AUTH) { "创建 auth-yggd 目录和默认配置文件" }
         }
 
         // 扫描并加载所有配置文件
@@ -124,7 +124,7 @@ class EntryConfigManager(
                 error {
                     "配置文件 ${path.fileName} 的 yggdrasilAuth.url 为空，跳过加载。" +
                         "当前读取路径: ${path.toAbsolutePath()}。" +
-                        "请确认你修改的是插件数据目录下的 entry/*.conf，且不要放在 entry/example 中；" +
+                        "请确认你修改的是插件数据目录下的 auth-yggd/*.conf，且不要放在 auth-yggd/example 中；" +
                         "src/main/resources/example 下的示例文件也不会在运行时直接加载。"
                 }
                 return
@@ -156,7 +156,7 @@ class EntryConfigManager(
                 """
                 HyperZoneLogin Entry Configuration - Example
                 这是一个示例配置文件，位于 example 文件夹中的配置不会被加载
-                复制此文件到 entry 文件夹（非 example 子文件夹）中并修改即可使用
+                复制此文件到 auth-yggd 文件夹（非 example 子文件夹）中并修改即可使用
                 
                 """.trimIndent()
         )
@@ -241,6 +241,7 @@ class EntryConfigManager(
             fileName = path.fileName.toString(),
             header = header,
             defaultProvider = { config },
+            postLoadHook = { _, _, _ -> config },
             forceSaveHook = { _, _ -> true }
         )
     }

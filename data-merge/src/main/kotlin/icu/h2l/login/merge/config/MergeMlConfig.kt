@@ -55,7 +55,7 @@ class MergeMlConfig {
         var jdbcUrl: String = ""
 
         @Comment("H2 文件路径（相对于插件数据目录）")
-        var path: String = "merge/multilogin"
+        var path: String = "data-merge/multilogin"
 
         @Comment("H2 JDBC 附加参数")
         var parameters: String = "MODE=MySQL"

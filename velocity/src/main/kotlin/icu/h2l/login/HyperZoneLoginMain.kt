@@ -362,7 +362,7 @@ class HyperZoneLoginMain(
     private fun loadDatabaseConfig() {
         val config = ConfigLoader.loadConfig<DatabaseSourceConfig>(
             dataDirectory = dataDirectory,
-            fileName = "database.conf",
+            fileName = "core-database.conf",
             header = "HyperZoneLogin Database Configuration | by ksqeib\n",
             defaultProvider = { DatabaseSourceConfig() }
         )
@@ -372,7 +372,7 @@ class HyperZoneLoginMain(
     private fun loadRemapConfig() {
         val config = ConfigLoader.loadConfig<RemapConfig>(
             dataDirectory = dataDirectory,
-            fileName = "remap.conf",
+            fileName = "core-remap.conf",
             header = "HyperZoneLogin Remap Configuration | by ksqeib\n",
             defaultProvider = { RemapConfig() }
         )
@@ -382,7 +382,7 @@ class HyperZoneLoginMain(
     private fun loadMiscConfig() {
         miscConfig = ConfigLoader.loadConfig<MiscConfig>(
             dataDirectory = dataDirectory,
-            fileName = "misc.conf",
+            fileName = "core-misc.conf",
             header = "HyperZoneLogin Misc Configuration | by ksqeib\n",
             defaultProvider = { MiscConfig() },
             postLoadHook = { node, loaded, _ -> readMiscConfig(node) },
@@ -418,7 +418,7 @@ class HyperZoneLoginMain(
     private fun loadDebugConfig() {
         debugConfig = ConfigLoader.loadConfig<DebugConfig>(
             dataDirectory = dataDirectory,
-            fileName = "debug.conf",
+            fileName = "core-debug.conf",
             header = "HyperZoneLogin Debug Configuration | by ksqeib\n包含 debug 日志与慢测试功能开关。\n",
             defaultProvider = { DebugConfig() },
             postLoadHook = { node, _, _ -> readDebugConfig(node) }
@@ -438,7 +438,7 @@ class HyperZoneLoginMain(
     private fun loadModulesConfig() {
         val config = ConfigLoader.loadConfig<ModulesConfig>(
             dataDirectory = dataDirectory,
-            fileName = "modules.conf",
+            fileName = "core-modules.conf",
             header = "HyperZoneLogin Embedded Modules Configuration | by ksqeib\n在单文件版中控制内置模块是否启用；若同名外部插件已安装，则自动跳过内置版本。\n",
             defaultProvider = { ModulesConfig() }
         )
@@ -448,7 +448,7 @@ class HyperZoneLoginMain(
     private fun loadBackendServerConfig() {
         val config = ConfigLoader.loadConfig<BackendServerConfig>(
             dataDirectory = dataDirectory,
-            fileName = "backend-server.conf",
+            fileName = "core-backend-server.conf",
             header = "HyperZoneLogin Backend Server Configuration | by ksqeib\n",
             defaultProvider = { BackendServerConfig() }
         )
@@ -458,7 +458,7 @@ class HyperZoneLoginMain(
     private fun loadOutPreConfig() {
         val config = ConfigLoader.loadConfig<OutPreConfig>(
             dataDirectory = dataDirectory,
-            fileName = "vserver-outpre.conf",
+            fileName = "core-vserver-outpre.conf",
             header = "HyperZoneLogin OutPre Configuration | by ksqeib\noutpre 模式的认证服、认证后目标服，以及对认证服暴露的 Host / Port / Player IP 都只在这里配置。\n",
             defaultProvider = { OutPreConfig() }
         )
@@ -468,7 +468,7 @@ class HyperZoneLoginMain(
     private fun loadMessagesConfig() {
         val config = ConfigLoader.loadConfig<MessagesConfig>(
             dataDirectory = dataDirectory,
-            fileName = "messages.conf",
+            fileName = "core-messages.conf",
             header = "HyperZoneLogin Messages Configuration | by ksqeib\n具体文案文件位于 messages/ 目录，可分别编辑 en_us.conf / zh_cn.conf / ru_ru.conf。\n",
             defaultProvider = { MessagesConfig() }
         )

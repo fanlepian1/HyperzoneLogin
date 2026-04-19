@@ -70,17 +70,17 @@ class MergeSubModule : HyperSubModule {
     }
 
     private fun loadMergeMlConfig(dataDirectory: Path): MergeMlConfig {
-        val mergeDirectory = dataDirectory.resolve("merge")
+        val mergeDirectory = dataDirectory.resolve("data-merge")
         Files.createDirectories(mergeDirectory)
 
         return ConfigLoader.loadConfig(
             dataDirectory = mergeDirectory,
-            fileName = "merge-ml.conf",
+            fileName = "multilogin.conf",
             header = "HyperZoneLogin ML Merge Configuration\n",
             defaultProvider = { MergeMlConfig() },
             postLoadHook = { _, loaded, firstCreation ->
                 if (firstCreation) {
-                    warn { "首次创建 merge-ml.conf，请按需修改后再执行 /hzl-merge ml" }
+                    warn { "首次创建 data-merge/multilogin.conf，请按需修改后再执行 /hzl-merge ml" }
                 }
                 loaded
             }
@@ -88,17 +88,17 @@ class MergeSubModule : HyperSubModule {
     }
 
     private fun loadMergeAmConfig(dataDirectory: Path): MergeAmConfig {
-        val mergeDirectory = dataDirectory.resolve("merge")
+        val mergeDirectory = dataDirectory.resolve("data-merge")
         Files.createDirectories(mergeDirectory)
 
         return ConfigLoader.loadConfig(
             dataDirectory = mergeDirectory,
-            fileName = "merge-am.conf",
+            fileName = "authme.conf",
             header = "HyperZoneLogin AUTHME Merge Configuration\n",
             defaultProvider = { MergeAmConfig() },
             postLoadHook = { _, loaded, firstCreation ->
                 if (firstCreation) {
-                    warn { "首次创建 merge-am.conf，请按需修改后再执行 /hzl-merge am" }
+                    warn { "首次创建 data-merge/authme.conf，请按需修改后再执行 /hzl-merge am" }
                 }
                 loaded
             }

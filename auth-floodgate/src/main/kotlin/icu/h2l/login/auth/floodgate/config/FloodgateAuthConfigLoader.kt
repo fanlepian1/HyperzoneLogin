@@ -29,7 +29,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 object FloodgateAuthConfigLoader {
-    private const val FILE_NAME = "floodgate-auth.conf"
+    private const val FILE_NAME = "auth-floodgate.conf"
 
     fun load(dataDirectory: Path): FloodgateAuthConfig {
         return ConfigLoader.loadConfig(

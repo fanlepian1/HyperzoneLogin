@@ -35,7 +35,7 @@ object OfflineMatchConfigLoader {
         fun load(dataDirectory: Path) {
                 config = ConfigLoader.loadConfig(
                         dataDirectory = dataDirectory,
-                        fileName = "offlinematch.conf",
+                        fileName = "auth-offline-match.conf",
                         header = "HyperZoneLogin Offline Match Configuration\n",
                         defaultProvider = { OfflineMatchConfig() }
                 )

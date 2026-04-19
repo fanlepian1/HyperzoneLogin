@@ -35,7 +35,7 @@ object OfflineAuthConfigLoader {
     fun load(dataDirectory: Path) {
         config = ConfigLoader.loadConfig(
             dataDirectory = dataDirectory,
-            fileName = "offline-auth.conf",
+            fileName = "auth-offline-main.conf",
             header = "HyperZoneLogin Offline Auth Configuration\n这里集中管理离线注册/登录保护、邮箱找回与提示行为\n",
             defaultProvider = { OfflineAuthConfig() }
         )

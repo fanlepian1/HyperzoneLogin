@@ -50,7 +50,7 @@ class MergeAmConfig {
         var jdbcUrl: String = ""
 
         @Comment("SQLite 文件路径（相对于插件数据目录）")
-        var path: String = "merge/authme.db"
+        var path: String = "data-merge/authme.db"
 
         @Comment("SQLite JDBC 附加参数")
         var parameters: String = ""
