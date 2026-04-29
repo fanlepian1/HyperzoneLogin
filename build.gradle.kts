@@ -213,8 +213,11 @@ subprojects {
     }
 
     repositories {
-        maven("https://maven.aliyun.com/repository/central")
-        maven("https://mirrors.cloud.tencent.com/nexus/repository/maven-public/")
+        val isCi = System.getenv("CI") == "true"
+        if (!isCi) {
+            maven("https://maven.aliyun.com/repository/central")
+            maven("https://mirrors.cloud.tencent.com/nexus/repository/maven-public/")
+        }
         mavenCentral()
 
         maven("https://repo.papermc.io/repository/maven-public/")
