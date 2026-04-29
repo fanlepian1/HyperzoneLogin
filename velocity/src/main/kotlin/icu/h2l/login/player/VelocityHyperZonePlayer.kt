@@ -161,6 +161,10 @@ class VelocityHyperZonePlayer(
         return isVerifiedState.get()
     }
 
+    fun setVerified() {
+        isVerifiedState.set(true)
+    }
+
     override fun canBind(): Boolean {
         return isVerified()
     }
@@ -175,8 +179,12 @@ class VelocityHyperZonePlayer(
             "hyperPlayer.overVerify before player=$clientOriginalName verified=${isVerifiedState.get()} attachedProfile=${hasAttachedProfile()} credentials=${submittedCredentials.map { it.javaClass.simpleName }} proxyBound=${proxyPlayer != null}"
         }
 
-        HyperZoneLoginMain.getInstance().profileService.attachVerifiedCredentialProfile(this)
-        isVerifiedState.set(true)
+        val profile = HyperZoneLoginMain.getInstance().profileService.attachVerifiedCredentialProfile(this)
+        
+        if (profile != null || hasAttachedProfile()) {
+            isVerifiedState.set(true)
+        }
+        
         debug(HyperZoneDebugType.OUTPRE_TRACE) {
             "hyperPlayer.overVerify after-attach player=$clientOriginalName verified=${isVerifiedState.get()} attachedProfile=${hasAttachedProfile()}"
         }
@@ -324,4 +332,3 @@ class VelocityHyperZonePlayer(
         }
     }
 }
-

@@ -87,7 +87,57 @@ class HyperZoneLoginCommand(
                                 )
                         )
                 )
+                .then(
+                    BrigadierCommand.literalArgumentBuilder("auth")
+                        .executes { context ->
+                            executeAuth(context.source)
+                        }
+                )
         )
+    }
+
+    private fun executeAuth(sender: CommandSource): Int {
+        val messages = HyperZoneLoginMain.getInstance().messageService
+        if (sender !is Player) {
+            messages.send(sender, MessageKeys.Common.ONLY_PLAYER)
+            return Command.SINGLE_SUCCESS
+        }
+
+        val hyperPlayer = runCatching {
+            HyperZonePlayerManager.getByPlayer(sender)
+        }.getOrElse {
+            messages.send(sender, MessageKeys.Common.PLAYER_STATE_UNAVAILABLE)
+            return Command.SINGLE_SUCCESS
+        }
+
+        if (!hyperPlayer.isInWaitingArea()) {
+            messages.send(sender, MessageKeys.Auth.NOT_IN_WAITING_AREA)
+            return Command.SINGLE_SUCCESS
+        }
+
+        if (hyperPlayer.hasAttachedProfile()) {
+            messages.send(sender, MessageKeys.Auth.ALREADY_HAS_PROFILE)
+            return Command.SINGLE_SUCCESS
+        }
+
+        runCatching {
+            val profileService = HyperZoneLoginMain.getInstance().profileService
+            profileService.attachVerifiedCredentialProfileForce(hyperPlayer)
+            (hyperPlayer as? icu.h2l.login.player.VelocityHyperZonePlayer)?.apply {
+                setVerified()
+                onAttachedProfileAvailable()
+            }
+        }.onSuccess {
+            if (hyperPlayer.hasAttachedProfile()) {
+                messages.send(sender, MessageKeys.Auth.SUCCESS)
+            } else {
+                messages.send(sender, MessageKeys.Auth.FAILED)
+            }
+        }.onFailure {
+            messages.send(sender, MessageKeys.Auth.FAILED)
+        }
+
+        return Command.SINGLE_SUCCESS
     }
 
     private fun showUsage(sender: CommandSource) {
@@ -225,4 +275,4 @@ class HyperZoneLoginCommand(
     companion object {
         private const val ADMIN_PERMISSION = "hyperzonelogin.admin"
     }
-} 
+}

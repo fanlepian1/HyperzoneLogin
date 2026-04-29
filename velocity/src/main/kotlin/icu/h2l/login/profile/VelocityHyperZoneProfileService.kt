@@ -82,6 +82,9 @@ class VelocityHyperZoneProfileService(
     }
 
     override fun canCreate(credential: HyperZoneCredential): Boolean {
+        if (!HyperZoneLoginMain.getCoreConfig().auth.autoAuth) {
+            return false
+        }
         val name = credential.getRegistrationName()
             ?: throw IllegalStateException(
                 "凭证 ${credential.channelId}:${credential.credentialId} 未提供注册名，无法调用 canCreate"
@@ -90,6 +93,9 @@ class VelocityHyperZoneProfileService(
     }
 
     override fun create(credential: HyperZoneCredential): Profile {
+        if (!HyperZoneLoginMain.getCoreConfig().auth.autoAuth) {
+            throw IllegalStateException("自动认证已禁用，无法创建档案。请使用 /auth 命令手动认证。")
+        }
         val name = credential.getRegistrationName()
             ?: throw IllegalStateException(
                 "凭证 ${credential.channelId}:${credential.credentialId} 未提供注册名，无法调用 create"
@@ -99,15 +105,24 @@ class VelocityHyperZoneProfileService(
     }
 
     fun canCreate(userName: String, uuid: UUID? = null): Boolean {
+        if (!HyperZoneLoginMain.getCoreConfig().auth.autoAuth) {
+            return false
+        }
         return getCreateBlockedReason(userName, uuid) == null
     }
 
     fun create(userName: String, uuid: UUID? = null): Profile {
+        if (!HyperZoneLoginMain.getCoreConfig().auth.autoAuth) {
+            throw IllegalStateException("自动认证已禁用，无法创建档案。请使用 /auth 命令手动认证。")
+        }
         val resolvedUuid = resolveRequestedUuid(userName, uuid)
         return createTrustedProfile(userName, resolvedUuid)
     }
 
     fun canCreateWithReUuid(userName: String): Boolean {
+        if (!HyperZoneLoginMain.getCoreConfig().auth.autoAuth) {
+            return false
+        }
         return getReUuidBlockedReason(userName) == null
     }
 
@@ -134,6 +149,9 @@ class VelocityHyperZoneProfileService(
         userName: String,
         remapPrefix: String = HyperZoneLoginMain.getCoreConfig().remap.prefix
     ): Profile {
+        if (!HyperZoneLoginMain.getCoreConfig().auth.autoAuth) {
+            throw IllegalStateException("自动认证已禁用，无法创建档案。请使用 /auth 命令手动认证。")
+        }
         repeat(REUUID_CREATE_RETRIES) {
             val resolvedUuid = ReUuidResolver.resolve(
                 userName = userName,
@@ -196,8 +214,84 @@ class VelocityHyperZoneProfileService(
     }
 
     override fun attachVerifiedCredentialProfile(player: HyperZonePlayer): Profile? {
-        getAttachedProfile(player)?.let { return it }
+        val existingProfile = getAttachedProfile(player)
+        if (existingProfile != null) {
+            return existingProfile
+        }
 
+        val credentials = player.getSubmittedCredentials()
+        val distinctProfileIds = credentials.mapNotNull { it.getBoundProfileId() }.distinct()
+        
+        val hasExistingProfileInDb = if (distinctProfileIds.size == 1) {
+            databaseHelper.getProfile(distinctProfileIds.single()) != null
+        } else {
+            false
+        }
+
+        val autoAuthEnabled = HyperZoneLoginMain.getCoreConfig().auth.autoAuth
+        if (!autoAuthEnabled && !hasExistingProfileInDb) {
+            debug(HyperZoneDebugType.OUTPRE_TRACE) {
+                "profileService.attachVerifiedCredentialProfile skipped: auto-auth is disabled and no existing profile in DB for player=${player.clientOriginalName}"
+            }
+            return null
+        }
+
+        return attachVerifiedCredentialProfileInternal(player)
+    }
+
+    fun attachVerifiedCredentialProfileForce(player: HyperZonePlayer): Profile? {
+        val existingProfile = getAttachedProfile(player)
+        if (existingProfile != null) {
+            return existingProfile
+        }
+
+        val credentials = player.getSubmittedCredentials()
+        if (credentials.isEmpty()) {
+            throw IllegalStateException("玩家 ${player.clientOriginalName} 尚未提交任何认证凭证，无法完成 Profile 绑定")
+        }
+
+        val distinctProfileIds = credentials.mapNotNull { it.getBoundProfileId() }.distinct()
+        
+        if (distinctProfileIds.isNotEmpty()) {
+            if (distinctProfileIds.size != 1) {
+                throw IllegalStateException(
+                    "玩家 ${player.clientOriginalName} 提交了多个冲突的 Profile 凭证: ${distinctProfileIds.joinToString()}"
+                )
+            }
+            val profile = attachProfile(player, distinctProfileIds.single())
+            if (profile != null) {
+                return profile
+            }
+        }
+
+        val credential = credentials.first()
+        if (canCreateInternal(credential)) {
+            val createdProfile = createInternal(credential)
+            bindSubmittedCredentials(player, createdProfile.id)
+            return attachProfile(player, createdProfile.id)
+        }
+
+        return null
+    }
+
+    private fun canCreateInternal(credential: HyperZoneCredential): Boolean {
+        val name = credential.getRegistrationName()
+            ?: throw IllegalStateException(
+                "凭证 ${credential.channelId}:${credential.credentialId} 未提供注册名，无法调用 canCreate"
+            )
+        return getCreateBlockedReason(name, credential.getSuggestedProfileCreateUuid()) == null
+    }
+
+    private fun createInternal(credential: HyperZoneCredential): Profile {
+        val name = credential.getRegistrationName()
+            ?: throw IllegalStateException(
+                "凭证 ${credential.channelId}:${credential.credentialId} 未提供注册名，无法调用 create"
+            )
+        val resolvedUuid = resolveRequestedUuid(name, credential.getSuggestedProfileCreateUuid())
+        return createTrustedProfile(name, resolvedUuid)
+    }
+
+    private fun attachVerifiedCredentialProfileInternal(player: HyperZonePlayer): Profile? {
         val credentials = player.getSubmittedCredentials()
         debug(HyperZoneDebugType.OUTPRE_TRACE) {
             "profileService.attachVerifiedCredentialProfile player=${player.clientOriginalName} credentials=${credentials.map { "${it.javaClass.simpleName}:${it.getBoundProfileId()}" }}"
@@ -270,4 +364,3 @@ class VelocityHyperZoneProfileService(
         return uuid ?: RemapUtils.genUUID(userName, remapPrefix)
     }
 }
-

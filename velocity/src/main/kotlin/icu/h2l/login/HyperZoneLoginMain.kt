@@ -205,6 +205,12 @@ class HyperZoneLoginMain(
             )
         )
         BindCodeCommandRegistrar.register(chatCommandManager, bindingCodeService)
+        chatCommandManager.register(
+            HyperChatCommandRegistration(
+                name = "auth",
+                executor = icu.h2l.login.command.AuthCommand()
+            )
+        )
         syncSlowTestCommands()
 
 //        最后加载模块

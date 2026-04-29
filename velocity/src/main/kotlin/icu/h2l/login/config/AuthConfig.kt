@@ -30,5 +30,9 @@ data class AuthConfig(
     @JvmField
     @Comment("config.core.auth.disableRegistration")
     val disableRegistration: List<String> = emptyList(),
+    @JvmField
+    @Comment("Whether to automatically authenticate and create profiles for first-time players. " +
+            "If false, first-time players must use /auth command to manually authenticate and create profile. " +
+            "Players with existing profiles will still be auto-authenticated regardless of this setting.")
+    val autoAuth: Boolean = false,
 )
-

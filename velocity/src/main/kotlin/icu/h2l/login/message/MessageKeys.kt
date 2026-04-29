@@ -28,6 +28,14 @@ object MessageKeys {
         const val PLAYER_STATE_UNAVAILABLE = "common.player-state-unavailable"
     }
 
+    object Auth {
+        const val ALREADY_HAS_PROFILE = "auth.already-has-profile"
+        const val SERVICE_UNAVAILABLE = "auth.service-unavailable"
+        const val SUCCESS = "auth.success"
+        const val FAILED = "auth.failed"
+        const val NOT_IN_WAITING_AREA = "auth.not-in-waiting-area"
+    }
+
     object Chat {
         const val MUST_VERIFY_BEFORE_CHAT = "chat.must-verify-before-chat"
         const val ONLY_ALLOWED_COMMANDS = "chat.only-allowed-commands"
@@ -136,4 +144,3 @@ object MessageKeys {
         const val BLOCKED_BY_SLOW_TEST = "over.blocked-by-slow-test"
     }
 }
-
