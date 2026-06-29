@@ -91,6 +91,7 @@ class OutPreAuthSessionHandler(
     private var connectedPlayer: ConnectedPlayer? = null
     private var loginState = State.START
 
+//    激活入口点
     override fun activated() {
         profile = mcConnection.type.addGameProfileTokensIfRequired(
             profile,
@@ -141,13 +142,19 @@ class OutPreAuthSessionHandler(
         validateIdentifiedKey(player, playerUniqueId)
         mcConnection.setAssociation(player)
 
+//        发送登入成功
         val success = ServerLoginSuccessPacket()
         success.username = player.username
         success.properties = player.gameProfileProperties
         success.uuid = playerUniqueId
+//        26_2兼容
+        if (inbound.getProtocolVersion().noLessThan(ProtocolVersion.MINECRAFT_26_2)) {
+            success.setSessionId(UUID.randomUUID()) // use random uuid for now
+        }
         mcConnection.write(success)
 
         loginState = State.SUCCESS_SENT
+//        版本判断
         if (inbound.protocolVersion.lessThan(ProtocolVersion.MINECRAFT_1_20_2)) {
             loginState = State.BRIDGING
             mcConnection.setActiveSessionHandler(StateRegistry.PLAY, OutPreClientBridgeSessionHandler(player, outPre.createBridge(player), false))

@@ -365,6 +365,7 @@ class NettyLoginSessionHandler(
     ): MinecraftSessionHandler {
         val activeAdapter = HyperZoneLoginMain.getInstance().serverAdapter
         if (activeAdapter is OutPreVServerAuth) {
+//            OutPre则使用我们的
             return OutPreAuthSessionHandler(
                 server = requireNotNull(server),
                 inbound = requireNotNull(inbound),
@@ -373,15 +374,15 @@ class NettyLoginSessionHandler(
                 serverIdHash = serverIdHash,
                 outPre = activeAdapter,
             )
+        }else{
+            return NettyReflectionHelper.createAuthSessionHandler(
+                server,
+                inbound,
+                profile,
+                onlineMode,
+                serverIdHash,
+            )
         }
-
-        return NettyReflectionHelper.createAuthSessionHandler(
-            server,
-            inbound,
-            profile,
-            onlineMode,
-            serverIdHash,
-        )
     }
 
 }
