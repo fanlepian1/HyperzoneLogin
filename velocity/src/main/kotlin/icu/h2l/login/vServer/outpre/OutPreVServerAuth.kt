@@ -28,7 +28,9 @@ import com.velocitypowered.api.event.player.ServerPreConnectEvent
 import com.velocitypowered.api.proxy.Player
 import com.velocitypowered.api.proxy.ProxyServer
 import com.velocitypowered.api.proxy.server.RegisteredServer
+import com.velocitypowered.api.proxy.server.ServerInfo
 import com.velocitypowered.proxy.connection.client.ConnectedPlayer
+import com.velocitypowered.proxy.server.VelocityRegisteredServer
 import icu.h2l.api.event.area.PlayerAreaTransitionReason
 import icu.h2l.api.event.vServer.VServerAuthStartEvent
 import icu.h2l.api.event.vServer.VServerJoinEvent
@@ -42,6 +44,7 @@ import icu.h2l.login.listener.PlayerAreaLifecycleListener
 import icu.h2l.login.manager.HyperZonePlayerManager
 import icu.h2l.login.message.MessageKeys
 import icu.h2l.login.player.VelocityHyperZonePlayer
+import icu.h2l.login.vServer.outpre.handler.OutPreAuthSessionHandler
 import io.netty.channel.Channel
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
@@ -85,13 +88,23 @@ class OutPreVServerAuth(
     }
 
 
+    //    创建后端桥接
     fun createBridge(player: ConnectedPlayer): OutPreBackendBridge {
         initialBridges[player.getChannel()]?.let { return it }
         val authAddress = configuredAuthAddress()
             ?: throw IllegalStateException("OutPre auth endpoint is not configured")
         val proxy = server as? com.velocitypowered.proxy.VelocityServer
             ?: throw IllegalStateException("OutPre requires VelocityServer runtime")
-        return OutPreBackendBridge(proxy, configuredAuthTargetLabel(), authAddress, player, this).also {
+        val authTargetLabel = configuredAuthTargetLabel()
+        val outPreServerInfo = ServerInfo(authTargetLabel, authAddress)
+//        强行转换 如果不是VelocityServer，说明有问题
+        val registeredServer = (proxy.getServer(configuredAuthTargetLabel())).orElseGet {
+            OutPreRegisteredServer(proxy, outPreServerInfo)
+        }
+        return OutPreBackendBridge(
+            proxy, authAddress, player, this,
+            registeredServer as VelocityRegisteredServer, outPreServerInfo
+        ).also {
             initialBridges[player.getChannel()] = it
         }
     }
@@ -121,12 +134,22 @@ class OutPreVServerAuth(
         states[player.getChannel()] = state
         pendingInitialHandlers[player.getChannel()] = handler
         hyperPlayer.suspendMessageDelivery()
-        trace("outpre.beginInitialJoin state-created channel=${player.getChannel()} player=${player.username} ${describeState(state)}")
+        trace(
+            "outpre.beginInitialJoin state-created channel=${player.getChannel()} player=${player.username} ${
+                describeState(
+                    state
+                )
+            }"
+        )
 
         val authStartEvent = VServerAuthStartEvent(player, hyperPlayer)
         server.eventManager.fire(authStartEvent).join()
         trace(
-            "outpre.beginInitialJoin after-authStart channel=${player.getChannel()} player=${player.username} waitingArea=${hyperPlayer.isInWaitingArea()} verified=${hyperPlayer.isVerified()} attachedProfile=${hyperPlayer.hasAttachedProfile()} ${describeState(state)}"
+            "outpre.beginInitialJoin after-authStart channel=${player.getChannel()} player=${player.username} waitingArea=${hyperPlayer.isInWaitingArea()} verified=${hyperPlayer.isVerified()} attachedProfile=${hyperPlayer.hasAttachedProfile()} ${
+                describeState(
+                    state
+                )
+            }"
         )
 
         if (!player.isActive) {
@@ -138,10 +161,22 @@ class OutPreVServerAuth(
         if (!hyperPlayer.isInWaitingArea()) {
             state.inAuthHold = false
             state.verifiedExitPending = true
-            trace("outpre.beginInitialJoin already-ready-after-authStart channel=${player.getChannel()} player=${player.username} ${describeState(state)}")
+            trace(
+                "outpre.beginInitialJoin already-ready-after-authStart channel=${player.getChannel()} player=${player.username} ${
+                    describeState(
+                        state
+                    )
+                }"
+            )
         }
 
-        trace("outpre.beginInitialJoin connect-bridge channel=${player.getChannel()} player=${player.username} ${describeState(state)}")
+        trace(
+            "outpre.beginInitialJoin connect-bridge channel=${player.getChannel()} player=${player.username} ${
+                describeState(
+                    state
+                )
+            }"
+        )
         connectToAuthBridge(player, hyperPlayer, createBridge(player), state)
     }
 
@@ -184,10 +219,10 @@ class OutPreVServerAuth(
     override fun isPlayerInWaitingArea(player: Player): Boolean {
         val state = states[player.getChannel()]
         return state != null && (
-            state.inAuthHold ||
-                !state.hasConnectedToAuthServerOnce ||
-                state.initialFlowPending
-            )
+                state.inAuthHold ||
+                        !state.hasConnectedToAuthServerOnce ||
+                        state.initialFlowPending
+                )
     }
 
     override fun supportsProxyFallbackCommands(): Boolean {
@@ -225,27 +260,57 @@ class OutPreVServerAuth(
         if (state.initialFlowPending) {
             if (!state.hasConnectedToAuthServerOnce) {
                 state.verifiedExitPending = true
-                trace("outpre.onVerified deferred-until-auth-join channel=${player.getChannel()} player=${player.username} ${describeState(state)}")
+                trace(
+                    "outpre.onVerified deferred-until-auth-join channel=${player.getChannel()} player=${player.username} ${
+                        describeState(
+                            state
+                        )
+                    }"
+                )
                 return
             }
             val handler = pendingInitialHandlers[player.getChannel()]
             if (handler == null) {
                 state.verifiedExitPending = true
-                trace("outpre.onVerified missing-handler channel=${player.getChannel()} player=${player.username} ${describeState(state)}")
+                trace(
+                    "outpre.onVerified missing-handler channel=${player.getChannel()} player=${player.username} ${
+                        describeState(
+                            state
+                        )
+                    }"
+                )
                 return
             }
-            trace("outpre.onVerified completing-initial-flow channel=${player.getChannel()} player=${player.username} target=${state.returnTargetServerName} ${describeState(state)}")
+            trace(
+                "outpre.onVerified completing-initial-flow channel=${player.getChannel()} player=${player.username} target=${state.returnTargetServerName} ${
+                    describeState(
+                        state
+                    )
+                }"
+            )
             handler.completeAfterVerification(state.returnTargetServerName)
             return
         }
 
         if (!state.hasConnectedToAuthServerOnce) {
             state.verifiedExitPending = true
-            trace("outpre.onVerified deferred-no-auth-join channel=${player.getChannel()} player=${player.username} ${describeState(state)}")
+            trace(
+                "outpre.onVerified deferred-no-auth-join channel=${player.getChannel()} player=${player.username} ${
+                    describeState(
+                        state
+                    )
+                }"
+            )
             return
         }
 
-        trace("outpre.onVerified connect-verified-target channel=${player.getChannel()} player=${player.username} ${describeState(state)}")
+        trace(
+            "outpre.onVerified connect-verified-target channel=${player.getChannel()} player=${player.username} ${
+                describeState(
+                    state
+                )
+            }"
+        )
         connectVerifiedPlayerToTarget(player, state)
     }
 
@@ -341,7 +406,11 @@ class OutPreVServerAuth(
             player.disconnect(Component.text(reason ?: "OutPre auth bridge disconnected", NamedTextColor.RED))
         }
         if (state != null) {
-            logger.warn("OutPre initial backend bridge disconnected before verification: player={}, reason={}", player.username, reason)
+            logger.warn(
+                "OutPre initial backend bridge disconnected before verification: player={}, reason={}",
+                player.username,
+                reason
+            )
         }
     }
 
@@ -352,14 +421,24 @@ class OutPreVServerAuth(
     ) {
         state.hasConnectedToAuthServerOnce = true
         trace(
-            "outpre.onAuthServerJoined channel=${player.getChannel()} player=${player.username} waitingArea=${hyperPlayer.isInWaitingArea()} verified=${hyperPlayer.isVerified()} attachedProfile=${hyperPlayer.hasAttachedProfile()} ${describeState(state)}"
+            "outpre.onAuthServerJoined channel=${player.getChannel()} player=${player.username} waitingArea=${hyperPlayer.isInWaitingArea()} verified=${hyperPlayer.isVerified()} attachedProfile=${hyperPlayer.hasAttachedProfile()} ${
+                describeState(
+                    state
+                )
+            }"
         )
         hyperPlayer.resumeMessageDelivery()
         server.eventManager.fire(VServerJoinEvent(player, hyperPlayer))
 
         if (state.verifiedExitPending) {
             state.verifiedExitPending = false
-            trace("outpre.onAuthServerJoined consume-verifiedExitPending channel=${player.getChannel()} player=${player.username} ${describeState(state)}")
+            trace(
+                "outpre.onAuthServerJoined consume-verifiedExitPending channel=${player.getChannel()} player=${player.username} ${
+                    describeState(
+                        state
+                    )
+                }"
+            )
             if (state.initialFlowPending) {
                 pendingInitialHandlers[player.getChannel()]?.completeAfterVerification(state.returnTargetServerName)
             } else {

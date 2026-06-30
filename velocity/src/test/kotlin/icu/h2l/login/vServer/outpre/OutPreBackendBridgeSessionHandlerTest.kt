@@ -25,6 +25,9 @@ import com.velocitypowered.api.proxy.ServerConnection
 import com.velocitypowered.proxy.protocol.MinecraftPacket
 import com.velocitypowered.proxy.protocol.packet.AvailableCommandsPacket
 import com.velocitypowered.proxy.protocol.packet.UpsertPlayerInfoPacket
+import icu.h2l.login.vServer.outpre.handler.shouldConsumeFinishedUpdateForVelocityRelease
+import icu.h2l.login.vServer.outpre.handler.shouldDropOutPreBackendPacket
+import icu.h2l.login.vServer.outpre.handler.shouldReleaseDirectlyToVelocityConfig
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue

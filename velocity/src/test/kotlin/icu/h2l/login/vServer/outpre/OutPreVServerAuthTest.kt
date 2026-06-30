@@ -28,12 +28,12 @@ import com.velocitypowered.proxy.connection.client.ConnectedPlayer
 import icu.h2l.api.HyperZoneApi
 import icu.h2l.api.event.vServer.VServerAuthStartEvent
 import icu.h2l.login.HyperZoneLoginMain
-import icu.h2l.login.config.VServerConfig
 import icu.h2l.login.database.DatabaseConfig
 import icu.h2l.login.database.DatabaseHelper
 import icu.h2l.login.manager.HyperZonePlayerManager
 import icu.h2l.login.message.MessageService
 import icu.h2l.login.profile.VelocityHyperZoneProfileService
+import icu.h2l.login.vServer.outpre.handler.OutPreAuthSessionHandler
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk

@@ -19,7 +19,7 @@
  *
  */
 
-package icu.h2l.login.vServer.outpre
+package icu.h2l.login.vServer.outpre.handler
 
 import com.velocitypowered.api.event.player.CookieRequestEvent
 import com.velocitypowered.api.network.ProtocolVersion
@@ -34,10 +34,12 @@ import com.velocitypowered.proxy.protocol.packet.config.*
 import icu.h2l.api.log.HyperZoneDebugType
 import icu.h2l.login.manager.HyperChatCommandManagerImpl
 import icu.h2l.login.util.debug
+import icu.h2l.login.vServer.outpre.OutPreBackendBridge
 import io.netty.buffer.ByteBuf
 import io.netty.buffer.Unpooled
 import io.netty.util.ReferenceCountUtil
 import net.kyori.adventure.text.Component
+import net.kyori.adventure.text.TextComponent
 
 class OutPreBackendBridgeSessionHandler(
     private val bridge: OutPreBackendBridge,
@@ -102,7 +104,9 @@ class OutPreBackendBridgeSessionHandler(
     }
 
     override fun handle(packet: DisconnectPacket): Boolean {
-        val reason = runCatching { packet.reason.component.toString() }.getOrNull()
+//        reson处理
+        val reason = runCatching { (packet.reason.component as TextComponent).content() }.getOrNull()
+//        Outdated client 版本不兼容，安装ViaBackwards
         bridge.onBackendDisconnected(reason)
         return true
     }

@@ -46,7 +46,7 @@ import icu.h2l.login.inject.network.NettyReflectionHelper
 import icu.h2l.login.inject.network.NettyReflectionHelper.fireLogin
 import icu.h2l.login.inject.network.VelocityNetworkInjectorImpl
 import icu.h2l.login.reflect.VelocityInternalAccess
-import icu.h2l.login.vServer.outpre.OutPreAuthSessionHandler
+import icu.h2l.login.vServer.outpre.handler.OutPreAuthSessionHandler
 import icu.h2l.login.vServer.outpre.OutPreVServerAuth
 import io.netty.channel.Channel
 import io.netty.channel.ChannelHandlerContext
@@ -365,6 +365,7 @@ class NettyLoginSessionHandler(
     ): MinecraftSessionHandler {
         val activeAdapter = HyperZoneLoginMain.getInstance().serverAdapter
         if (activeAdapter is OutPreVServerAuth) {
+//            OutPre则使用我们的
             return OutPreAuthSessionHandler(
                 server = requireNotNull(server),
                 inbound = requireNotNull(inbound),
@@ -373,15 +374,15 @@ class NettyLoginSessionHandler(
                 serverIdHash = serverIdHash,
                 outPre = activeAdapter,
             )
+        }else{
+            return NettyReflectionHelper.createAuthSessionHandler(
+                server,
+                inbound,
+                profile,
+                onlineMode,
+                serverIdHash,
+            )
         }
-
-        return NettyReflectionHelper.createAuthSessionHandler(
-            server,
-            inbound,
-            profile,
-            onlineMode,
-            serverIdHash,
-        )
     }
 
 }

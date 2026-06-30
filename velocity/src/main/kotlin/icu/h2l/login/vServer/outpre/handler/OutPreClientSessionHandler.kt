@@ -19,10 +19,11 @@
  *
  */
 
-package icu.h2l.login.vServer.outpre
+package icu.h2l.login.vServer.outpre.handler
 
 import com.velocitypowered.api.network.ProtocolVersion
 import com.velocitypowered.proxy.VelocityServer
+import com.velocitypowered.proxy.connection.MinecraftConnection
 import com.velocitypowered.proxy.connection.MinecraftSessionHandler
 import com.velocitypowered.proxy.connection.client.ClientConfigSessionHandler
 import com.velocitypowered.proxy.connection.client.ConnectedPlayer
@@ -46,6 +47,7 @@ import com.velocitypowered.proxy.protocol.util.PluginMessageUtil
 import icu.h2l.login.inject.network.NettyReflectionHelper
 import icu.h2l.login.inject.network.NettyReflectionHelper.reflectedTeardown
 import icu.h2l.login.manager.HyperChatCommandManagerImpl
+import icu.h2l.login.vServer.outpre.OutPreBackendBridge
 import io.netty.buffer.ByteBuf
 import io.netty.buffer.Unpooled
 import io.netty.util.ReferenceCountUtil
@@ -59,7 +61,7 @@ class OutPreClientBridgeSessionHandler(
 ) : MinecraftSessionHandler {
     private data class PendingWrite(
         val requiredPhase: OutPreBackendBridge.Phase,
-        val write: (com.velocitypowered.proxy.connection.MinecraftConnection) -> Unit,
+        val write: (MinecraftConnection) -> Unit,
         val release: () -> Unit = {},
     )
 
@@ -87,7 +89,7 @@ class OutPreClientBridgeSessionHandler(
 
     private fun sendOrQueue(
         requiredPhase: OutPreBackendBridge.Phase,
-        action: (com.velocitypowered.proxy.connection.MinecraftConnection) -> Unit,
+        action: (MinecraftConnection) -> Unit,
     ) {
         sendOrQueue(PendingWrite(requiredPhase, action))
     }
@@ -110,9 +112,9 @@ class OutPreClientBridgeSessionHandler(
 
     private fun sendOrQueueRetained(
         requiredPhase: OutPreBackendBridge.Phase,
-        writeNow: (com.velocitypowered.proxy.connection.MinecraftConnection) -> Unit,
+        writeNow: (MinecraftConnection) -> Unit,
         retainForQueue: () -> Any,
-        writer: (com.velocitypowered.proxy.connection.MinecraftConnection, Any) -> Unit,
+        writer: (MinecraftConnection, Any) -> Unit,
     ) {
         if (bridge.canForwardClientPackets(requiredPhase)) {
             writeNow(backend())

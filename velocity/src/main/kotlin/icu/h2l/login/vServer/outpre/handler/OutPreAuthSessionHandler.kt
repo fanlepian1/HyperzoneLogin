@@ -19,7 +19,7 @@
  *
  */
 
-package icu.h2l.login.vServer.outpre
+package icu.h2l.login.vServer.outpre.handler
 
 import com.velocitypowered.api.event.connection.DisconnectEvent
 import com.velocitypowered.api.event.connection.LoginEvent
@@ -59,12 +59,15 @@ import icu.h2l.login.util.buildAttachedIdentityGameProfile
 import icu.h2l.login.util.describeGameProfileBrief
 import icu.h2l.login.util.hasSemanticGameProfileDifference
 import icu.h2l.login.util.setConnectedPlayerGameProfile
+import icu.h2l.login.vServer.outpre.OutPreVServerAuth
 import io.netty.buffer.ByteBuf
 import net.kyori.adventure.text.Component
 import net.kyori.adventure.text.format.NamedTextColor
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
-import java.util.*
+import java.util.Objects
+import java.util.Optional
+import java.util.UUID
 import java.util.concurrent.CompletableFuture
 
 /**
@@ -91,14 +94,15 @@ class OutPreAuthSessionHandler(
     private var connectedPlayer: ConnectedPlayer? = null
     private var loginState = State.START
 
+//    激活入口点
     override fun activated() {
         profile = mcConnection.type.addGameProfileTokensIfRequired(
             profile,
             server.configuration.playerInfoForwardingMode,
         )
-        debug(HyperZoneDebugType.OUTPRE_TRACE) {
-            "outpre.handler.activated channel=${mcConnection.channel} initialProfile=${describeGameProfileBrief(profile)} onlineMode=$onlineMode protocol=${inbound.protocolVersion}"
-        }
+    debug(HyperZoneDebugType.OUTPRE_TRACE) {
+        "outpre.handler.activated channel=${mcConnection.channel} initialProfile=${describeGameProfileBrief(profile)} onlineMode=$onlineMode protocol=${inbound.protocolVersion}"
+    }
 
         val player = NettyReflectionHelper.createConnectedPlayer(
             server = server,
@@ -125,7 +129,11 @@ class OutPreAuthSessionHandler(
 
     private fun startTemporaryLoginPhase(player: ConnectedPlayer) {
         debug(HyperZoneDebugType.OUTPRE_TRACE) {
-            "outpre.handler.startTemporaryLoginPhase channel=${mcConnection.channel} player=${player.username} onlineMode=$onlineMode profile=${describeGameProfileBrief(player.gameProfile)}"
+            "outpre.handler.startTemporaryLoginPhase channel=${mcConnection.channel} player=${player.username} onlineMode=$onlineMode profile=${
+                describeGameProfileBrief(
+                    player.gameProfile
+                )
+            }"
         }
         val threshold = server.configuration.compressionThreshold
         if (threshold >= 0 && mcConnection.protocolVersion.noLessThan(ProtocolVersion.MINECRAFT_1_8)) {
@@ -141,16 +149,25 @@ class OutPreAuthSessionHandler(
         validateIdentifiedKey(player, playerUniqueId)
         mcConnection.setAssociation(player)
 
+//        发送登入成功
         val success = ServerLoginSuccessPacket()
         success.username = player.username
         success.properties = player.gameProfileProperties
         success.uuid = playerUniqueId
+//        26_2兼容
+        if (inbound.getProtocolVersion().noLessThan(ProtocolVersion.MINECRAFT_26_2)) {
+            success.setSessionId(UUID.randomUUID()) // use random uuid for now
+        }
         mcConnection.write(success)
 
         loginState = State.SUCCESS_SENT
+//        版本判断
         if (inbound.protocolVersion.lessThan(ProtocolVersion.MINECRAFT_1_20_2)) {
             loginState = State.BRIDGING
-            mcConnection.setActiveSessionHandler(StateRegistry.PLAY, OutPreClientBridgeSessionHandler(player, outPre.createBridge(player), false))
+            mcConnection.setActiveSessionHandler(
+                StateRegistry.PLAY,
+                OutPreClientBridgeSessionHandler(player, outPre.createBridge(player), false)
+            )
             outPre.beginInitialJoin(player, this)
         }
     }
@@ -196,7 +213,9 @@ class OutPreAuthSessionHandler(
         }
 
         debug(HyperZoneDebugType.OUTPRE_TRACE) {
-            "outpre.handler.completeAfterVerification start channel=${mcConnection.channel} player=${player.username} preferredTarget=$preferredTargetServerName waitingArea=${hyperPlayer.isInWaitingArea()} verified=${hyperPlayer.isVerified()} attachedProfile=${hyperPlayer.hasAttachedProfile()} credentials=${hyperPlayer.getSubmittedCredentials().map { it.javaClass.simpleName }}"
+            "outpre.handler.completeAfterVerification start channel=${mcConnection.channel} player=${player.username} preferredTarget=$preferredTargetServerName waitingArea=${hyperPlayer.isInWaitingArea()} verified=${hyperPlayer.isVerified()} attachedProfile=${hyperPlayer.hasAttachedProfile()} credentials=${
+                hyperPlayer.getSubmittedCredentials().map { it.javaClass.simpleName }
+            }"
         }
 
         val attachedProfile = runCatching {
@@ -337,7 +356,10 @@ class OutPreAuthSessionHandler(
 
         loginState = State.BRIDGING
         val player = connectedPlayer ?: return true
-        mcConnection.setActiveSessionHandler(StateRegistry.CONFIG, OutPreClientBridgeSessionHandler(player, outPre.createBridge(player), true))
+        mcConnection.setActiveSessionHandler(
+            StateRegistry.CONFIG,
+            OutPreClientBridgeSessionHandler(player, outPre.createBridge(player), true)
+        )
         outPre.beginInitialJoin(player, this)
         return true
     }

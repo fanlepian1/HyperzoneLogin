@@ -39,6 +39,7 @@ import com.velocitypowered.proxy.protocol.netty.MinecraftVarintFrameDecoder
 import com.velocitypowered.proxy.protocol.netty.MinecraftVarintLengthEncoder
 import com.velocitypowered.proxy.protocol.util.ByteBufDataOutput
 import com.velocitypowered.proxy.protocol.ProtocolUtils
+import com.velocitypowered.proxy.server.VelocityRegisteredServer
 import icu.h2l.login.reflect.VelocityInternalAccess
 import io.netty.buffer.ByteBuf
 import io.netty.buffer.Unpooled
@@ -46,7 +47,6 @@ import io.netty.channel.Channel
 import io.netty.channel.ChannelInitializer
 import io.netty.handler.timeout.ReadTimeoutHandler
 import net.kyori.adventure.audience.Audience
-import net.kyori.adventure.audience.ForwardingAudience
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
@@ -67,7 +67,7 @@ private val _unusedPingCtor = Unit
 class OutPreRegisteredServer(
     private val proxyServer: VelocityServer,
     private val serverInfo: ServerInfo,
-) : RegisteredServer, ForwardingAudience {
+) : VelocityRegisteredServer(proxyServer, serverInfo) {
 
     /** UUID → 当前通过该端点桥接的玩家，由 [OutPreBackendBridge] 维护 */
     private val bridgedPlayers = ConcurrentHashMap<UUID, OutPreBackendBridge>()
@@ -104,9 +104,9 @@ class OutPreRegisteredServer(
     /**
      * 通过已桥接的玩家连接将 plugin message 发送到后端服务器，消息发送后释放 [data]。
      */
-    fun sendPluginMessage(identifier: ChannelIdentifier, data: ByteBuf): Boolean {
+    override fun sendPluginMessage(identifier: ChannelIdentifier, data: ByteBuf): Boolean {
         for (bridge in bridgedPlayers.values) {
-            val conn = bridge.connection ?: continue
+            val conn = bridge.backendConnection ?: continue
             if (conn.isClosed) continue
             conn.write(
                 com.velocitypowered.proxy.protocol.packet.PluginMessagePacket(
